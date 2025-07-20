@@ -1,0 +1,252 @@
+# airflow/values.yaml
+# Apache Airflow configuration for data-platform cluster
+
+# Airflow version and image
+defaultAirflowRepository: apache/airflow
+defaultAirflowTag: "2.7.3"
+
+# Airflow executor - KubernetesExecutor for scalability
+executor: "KubernetesExecutor"
+
+# Airflow configuration
+config:
+  # Core configuration
+  core:
+    dags_folder: '/opt/airflow/dags'
+    load_examples: 'False'
+    executor: 'KubernetesExecutor'
+    parallelism: 32
+    max_active_runs_per_dag: 16
+    dagbag_import_timeout: 30
+    dag_file_processor_timeout: 50
+  
+  # Webserver configuration
+  webserver:
+    instance_name: 'Data Platform Airflow'
+    base_url: 'http://localhost:8080'
+    enable_proxy_fix: 'True'
+    expose_config: 'True'
+    rbac: 'True'
+  
+  # Scheduler configuration
+  scheduler:
+    catchup_by_default: 'False'
+    dag_dir_list_interval: 300
+    job_heartbeat_sec: 5
+    max_threads: 2
+    scheduler_zombie_task_threshold: 300
+  
+  # Kubernetes executor configuration
+  kubernetes_executor:
+    namespace: 'airflow'
+    pod_template_file: '/opt/airflow/pod_templates/pod_template_file.yaml'
+    worker_container_repository: 'apache/airflow'
+    worker_container_tag: '2.7.3'
+    multi_namespace_mode: 'False'
+  
+  # Logging configuration
+  logging:
+    remote_logging: 'True'
+    remote_base_log_folder: 's3://data-platform-logs-s3d92803/airflow-logs'
+    remote_log_conn_id: 'aws_default'
+    encrypt_s3_logs: 'False'
+  
+  # Email configuration
+  email:
+    email_backend: 'airflow.utils.email.send_email_smtp'
+  
+  smtp:
+    smtp_host: 'localhost'
+    smtp_starttls: 'True'
+    smtp_ssl: 'False'
+    smtp_port: 587
+
+# Images configuration
+images:
+  airflow:
+    repository: apache/airflow
+    tag: "2.7.3"
+    pullPolicy: IfNotPresent
+  
+  useDefaultImageForMigration: true
+
+# Service account
+serviceAccount:
+  create: true
+  name: airflow
+  annotations:
+    # Note: This role needs to be created with proper S3 permissions
+    eks.amazonaws.com/role-arn: "arn:aws:iam::399883341639:role/data-platform-airflow-s3-access"
+
+# Webserver configuration
+webserver:
+  replicas: 1
+  
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 8080
+    annotations: {}
+  
+  # Resource configuration
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  
+  # Default user configuration
+  defaultUser:
+    enabled: true
+    role: Admin
+    username: admin
+    email: admin@dataplatform.local
+    firstName: Admin
+    lastName: User
+    password: "changeme123!"  # IMPORTANT: Change this in production
+
+  # Liveness and readiness probes
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 60
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 5
+  
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# Scheduler configuration
+scheduler:
+  replicas: 1
+  
+  # Resource configuration
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  
+  # Liveness and readiness probes
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 60
+    periodSeconds: 30
+    timeoutSeconds: 10
+    failureThreshold: 5
+
+# Workers configuration (not used with KubernetesExecutor)
+workers:
+  replicas: 0
+
+# Triggerer configuration
+triggerer:
+  enabled: true
+  replicas: 1
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# Database configuration (external RDS PostgreSQL)
+data:
+  metadataConnection:
+    user: "admin"
+    pass: "YOUR_DB_PASSWORD"  # IMPORTANT: Update with actual password
+    protocol: postgresql
+    host: "data-platform-hive-metastore.c5d58elqcjen.eu-west-3.rds.amazonaws.com"
+    port: 3306
+    db: airflow
+    sslmode: prefer
+
+# Redis configuration (not needed for KubernetesExecutor)
+redis:
+  enabled: false
+
+# PostgreSQL (disable internal, use external RDS)
+postgresql:
+  enabled: false
+
+# Persistent volumes for DAGs and logs
+dags:
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClassName: "gp2"
+    accessMode: ReadWriteOnce
+  
+  # Git sync for DAGs
+  gitSync:
+    enabled: false
+
+logs:
+  persistence:
+    enabled: false  # Using S3 for logs
+
+# StatsD and monitoring
+statsd:
+  enabled: true
+  
+  statsd:
+    enabled: true
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+
+# Extra environment variables
+env:
+  - name: AIRFLOW__CORE__LOAD_EXAMPLES
+    value: "False"
+  - name: AIRFLOW__WEBSERVER__EXPOSE_CONFIG
+    value: "True"
+  - name: AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION
+    value: "False"
+  - name: AWS_DEFAULT_REGION
+    value: "eu-west-3"
+
+# Security context
+uid: 50000
+gid: 50000
+
+securityContext:
+  runAsUser: 50000
+  runAsGroup: 50000
+  fsGroup: 50000
+
+# Node selection - use system nodes
+nodeSelector:
+  node-group: system
+
+tolerations: []
+affinity: {}
+
+# Pod disruption budget
+podDisruptionBudget:
+  enabled: true
+  maxUnavailable: 1
+
+# Network policy
+networkPolicies:
+  enabled: false
+
+# Monitoring integration
+serviceMonitor:
+  enabled: true
+  labels:
+    prometheus: kube-prometheus-stack
