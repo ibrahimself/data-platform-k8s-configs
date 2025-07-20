@@ -1,0 +1,23 @@
+# argocd-apps/spark/ingress.yaml
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: spark-history-server
+  namespace: spark
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      - path: /spark(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: spark-history-server
+            port:
+              number: 18080

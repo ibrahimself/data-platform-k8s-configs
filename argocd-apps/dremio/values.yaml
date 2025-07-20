@@ -1,11 +1,8 @@
-# dremio/values.yaml
+# argocd-apps/dremio/values.yaml
 # Dremio Enterprise Edition configuration
 
 dremio:
-  # Your trial credentials from Quay.io
-  trialImagePullCredentials: "ewogICJhdXRocyI6IHsKICAgICJxdWF5LmlvIjogewogICAgICAiYXV0aCI6ICJaSEpsYldsdkszUnlhV0ZzWDJGalkyVnpjMTh3TjE4eE4xOHlNREkxT2s4d1dFYzRUbGhaTkZjeFFsZE9RMEk1T1VGUk1FdGFPRFpCVTB3MFFWZFdSRUl3UVVKQlRVUklSRVJZVkZwUFFqSktOVkJHVUVoSVdVWkJXVUZYUmtVPSIsCiAgICAgICJlbWFpbCI6ICIiCiAgICB9CiAgfQp9"
-  
-  # Your license key (valid until 2025-06-18)
+  # Your trial license (valid until 2025-06-18)
   license: "eyJraWQiOiI4MGZhMjgxYzZhZjczNDNkNTE1YTVhMzg1MDg1N2RhNmE2YmEzMTU3NWE5ZjVlZmVhMmQ4MTkyMGUyM2Q2OGY0IiwiYWxnIjoiRVMyNTYifQ.eyJpc3MiOiJEcmVtaW8iLCJzdWIiOiIwMDM1ZDAwMDA3TFRkT0VBQTEiLCJuYmYiOjE3NTI3ODA0NzYsImV4cCI6MTc1NTU0NTI3NiwiaWF0IjoxNzUyNzgwNDc2LCJqdGkiOiIxNzUyNzgwNDc2MDYyVzJjciJ9.u8bxfpQvyieeGn3H8RNIyKqbIgHR4pYO0mfBDBh23WJJw58t2WsDEhbOL6rUdfyGu4hItUtcohCoSEXMaAAolg"
   
   image:
@@ -21,10 +18,14 @@ dremio:
     "services.fabric.memory.reservation": "4G"
     "services.coordinator.heap.memory.max": "8G"
     "services.executor.heap.memory.max": "8G"
-    
-    # Data lake integration
-    "paths.dist": "s3a://data-platform-data-lake-s3d92803/dremio"
     "services.coordinator.enable-heap-monitoring": "true"
+    
+    # If using S3, uncomment and configure:
+    # "paths.dist": "s3a://your-bucket-name/dremio"
+
+# Image pull secrets - use the secret we created
+imagePullSecrets:
+  - dremio-trial-pull-secret
 
 # Coordinator (Master) configuration
 coordinator:
@@ -34,7 +35,7 @@ coordinator:
   web:
     auth:
       enabled: true
-      type: "internal"
+      type: "internal"  # Can be: internal, ldap, azuread, oauth, oauth+ldap
     port: 9047
     ssl:
       enabled: false
@@ -42,32 +43,28 @@ coordinator:
   # Resource allocation
   resources:
     requests:
-      cpu: "4"
+      cpu: "2"
       memory: "8Gi"
     limits:
-      cpu: "8"
+      cpu: "4"
       memory: "16Gi"
 
   # Service configuration for external access
   service:
     type: ClusterIP
     port: 9047
-    annotations:
-      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
 
   # Persistent storage for coordinator metadata
   volumeClaimTemplate:
-    storageClassName: "gp2"
+    storageClassName: "gp2"  # Update based on your storage class
     accessModes: ["ReadWriteOnce"]
     resources:
       requests:
         storage: 100Gi
 
-  # Node selection - use analytics nodes
-  nodeSelector:
-    node-group: analytics
-  tolerations: []
-  affinity: {}
+  # Node selection - use analytics nodes if available
+  nodeSelector: {}
+    # node-group: analytics  # Uncomment if you have node groups
 
 # Executor configuration
 executor:
@@ -76,26 +73,26 @@ executor:
   # Resource allocation for executors
   resources:
     requests:
-      cpu: "4"
-      memory: "12Gi"
+      cpu: "2"
+      memory: "8Gi"
     limits:
-      cpu: "8"
-      memory: "24Gi"
+      cpu: "4"
+      memory: "16Gi"
 
   # Executor storage for caching and spill
   volumeClaimTemplate:
-    storageClassName: "gp2"
+    storageClassName: "gp2"  # Update based on your storage class
     accessModes: ["ReadWriteOnce"]
     resources:
       requests:
-        storage: 200Gi
+        storage: 100Gi
 
-  # Node selection for executors - use compute nodes
-  nodeSelector:
-    node-group: compute
-  tolerations: []
+  # Node selection for executors
+  nodeSelector: {}
+    # node-group: compute  # Uncomment if you have node groups
+  
+  # Spread executors across nodes
   affinity:
-    # Spread executors across nodes
     podAntiAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
       - weight: 100
@@ -108,13 +105,23 @@ executor:
               - dremio-executor
           topologyKey: kubernetes.io/hostname
 
-# Distributed storage configuration (S3)
+# Distributed storage configuration
+# Choose one of: aws, gcp, or azureStorage
 distStorage:
+  # For local development/testing, you can use PVCs
+  # For production, configure S3, GCS, or Azure Storage
+  
+  # Option 1: AWS S3 (most common)
   type: "aws"
   aws:
-    bucketName: "data-platform-data-lake-s3d92803"
+    bucketName: "your-s3-bucket-name"  # CHANGE THIS
     path: "/dremio"
-    authentication: "metadata"  # Use IAM roles
+    authentication: "metadata"  # Use IAM roles (recommended for EKS)
+    # For access key authentication, use:
+    # authentication: "accessKeySecret"
+    # credentials:
+    #   accessKey: "YOUR_ACCESS_KEY"
+    #   secret: "YOUR_SECRET_KEY"
     
     # S3 performance optimizations
     extraProperties: |
@@ -134,21 +141,31 @@ distStorage:
         <name>fs.s3a.multipart.size</name>
         <value>67108864</value>
       </property>
-      <property>
-        <name>fs.s3a.multipart.threshold</name>
-        <value>134217728</value>
-      </property>
-      <property>
-        <name>fs.s3a.fast.upload</name>
-        <value>true</value>
-      </property>
 
-# Service Account for AWS integration
+  # Option 2: Google Cloud Storage
+  # type: "gcp"
+  # gcp:
+  #   bucketName: "your-gcs-bucket"
+  #   path: "/"
+  #   authentication: "auto"
+
+  # Option 3: Azure Storage
+  # type: "azureStorage"
+  # azureStorage:
+  #   accountName: "your-storage-account"
+  #   filesystem: "your-container"
+  #   path: "/"
+  #   authentication: "accessKey"
+  #   credentials:
+  #     accessKey: "YOUR_ACCESS_KEY"
+
+# Service Account for cloud integration
 serviceAccount:
   create: true
   name: dremio
-  annotations:
-    eks.amazonaws.com/role-arn: "arn:aws:iam::399883341639:role/data-platform-dremio-s3-access"
+  # For AWS EKS with IRSA:
+  # annotations:
+  #   eks.amazonaws.com/role-arn: "arn:aws:iam::ACCOUNT:role/dremio-s3-access"
 
 # Monitoring and observability
 monitoring:
@@ -167,20 +184,24 @@ securityContext:
   runAsGroup: 999
   fsGroup: 999
 
-# Additional pod configurations
 podSecurityContext:
   runAsNonRoot: true
   runAsUser: 999
   fsGroup: 999
 
-# Image pull secrets (handled by trialImagePullCredentials above)
-imagePullSecrets: []
-
 # Additional environment variables
 extraEnv:
-  - name: AWS_REGION
-    value: eu-west-3
+  - name: DREMIO_LOG_LEVEL
+    value: INFO
+  # Add AWS_REGION if using S3:
+  # - name: AWS_REGION
+  #   value: eu-west-3
 
-# Additional volumes
-extraVolumes: []
-extraVolumeMounts: []
+# Zookeeper configuration (for high availability)
+zookeeper:
+  enabled: true
+  replicaCount: 3
+  persistence:
+    enabled: true
+    storageClass: "gp2"
+    size: 10Gi

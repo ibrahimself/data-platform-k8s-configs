@@ -1,0 +1,10 @@
+# argocd-apps/spark/namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: spark
+  labels:
+    name: spark
+    app.kubernetes.io/part-of: data-platform
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"

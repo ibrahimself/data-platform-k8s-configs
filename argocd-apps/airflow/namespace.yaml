@@ -1,0 +1,10 @@
+# argocd-apps/airflow/namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: airflow
+  labels:
+    name: airflow
+    app.kubernetes.io/part-of: data-platform
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"

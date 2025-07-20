@@ -1,0 +1,23 @@
+# argocd-apps/dremio/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: dremio
+
+resources:
+  - namespace.yaml
+  - image-pull-secret.yaml  # Secret for pulling from quay.io
+
+helmCharts:
+  - name: dremio
+    repo: https://charts.dremio.com
+    version: 3.0.1  # Helm chart version for Dremio 26.0.1
+    releaseName: dremio
+    namespace: dremio
+    valuesFile: values.yaml
+
+# Common labels
+commonLabels:
+  app.kubernetes.io/part-of: data-platform
+  app.kubernetes.io/managed-by: argocd
+  app.kubernetes.io/name: dremio

@@ -1,0 +1,112 @@
+# argocd-apps/spark/spark-history-pvc.yaml
+---
+# PVC for Spark History Server event logs
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: spark-history-pvc
+  namespace: spark
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gp2  # Update based on your storage class
+  resources:
+    requests:
+      storage: 50Gi
+---
+# Spark History Server Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-history-server
+  namespace: spark
+  labels:
+    app: spark-history-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spark-history-server
+  template:
+    metadata:
+      labels:
+        app: spark-history-server
+    spec:
+      serviceAccountName: spark
+      containers:
+      - name: spark-history-server
+        image: apache/spark:3.5.3
+        command:
+          - /opt/spark/bin/spark-class
+        args:
+          - org.apache.spark.deploy.history.HistoryServer
+        env:
+        - name: SPARK_HISTORY_OPTS
+          value: "-Dspark.history.fs.logDirectory=/tmp/spark-events -Dspark.history.ui.port=18080"
+        - name: SPARK_NO_DAEMONIZE
+          value: "true"
+        ports:
+        - containerPort: 18080
+          name: web
+          protocol: TCP
+        resources:
+          requests:
+            cpu: 200m
+            memory: 1Gi
+          limits:
+            cpu: 500m
+            memory: 2Gi
+        volumeMounts:
+        - name: spark-events
+          mountPath: /tmp/spark-events
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 18080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 18080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      volumes:
+      - name: spark-events
+        persistentVolumeClaim:
+          claimName: spark-history-pvc
+---
+# Service for History Server
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-history-server
+  namespace: spark
+  labels:
+    app: spark-history-server
+spec:
+  type: ClusterIP
+  ports:
+  - port: 18080
+    targetPort: 18080
+    name: web
+  selector:
+    app: spark-history-server
+---
+# ServiceMonitor for Prometheus
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: spark-history-server
+  namespace: spark
+  labels:
+    app: spark-history-server
+    prometheus: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: spark-history-server
+  endpoints:
+  - port: web
+    path: /metrics
+    interval: 30s

@@ -1,0 +1,13 @@
+# argocd-apps/monitoring/namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    name: monitoring
+    app.kubernetes.io/part-of: data-platform
+    # Disable service mesh injection for monitoring components
+    istio-injection: disabled
+    linkerd.io/inject: disabled
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"  # Create namespace first

@@ -1,0 +1,24 @@
+# argocd-apps/airflow/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: airflow
+
+resources:
+  - namespace.yaml
+  - airflow-secrets.yaml  # Database connection secrets
+  - ingress.yaml
+
+# Deploy Airflow via Helm
+helmCharts:
+  - name: airflow
+    repo: https://airflow.apache.org
+    version: 1.16.0  # For Airflow 2.10.5
+    releaseName: airflow
+    namespace: airflow
+    valuesFile: values.yaml
+
+# Common labels
+commonLabels:
+  app.kubernetes.io/part-of: data-platform
+  app.kubernetes.io/managed-by: argocd

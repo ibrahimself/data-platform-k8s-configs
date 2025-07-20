@@ -1,0 +1,31 @@
+# argocd-apps/monitoring/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# This app will be deployed to monitoring namespace
+namespace: monitoring
+
+# Create namespace first
+resources:
+  - namespace.yaml
+  - ingress.yaml
+
+# Deploy kube-prometheus-stack via Helm
+helmCharts:
+  - name: kube-prometheus-stack
+    repo: https://prometheus-community.github.io/helm-charts
+    version: 56.6.2
+    releaseName: prometheus-stack
+    namespace: monitoring
+    valuesFile: values.yaml
+    includeCRDs: true
+
+# Common labels for all resources
+commonLabels:
+  app.kubernetes.io/part-of: data-platform
+  app.kubernetes.io/managed-by: argocd
+
+# Additional resources to deploy
+resources:
+  - namespace.yaml
+  - ingress-simple.yaml  # Simple path-based ingress

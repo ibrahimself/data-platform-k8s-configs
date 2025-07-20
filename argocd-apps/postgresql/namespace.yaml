@@ -1,0 +1,10 @@
+# argocd-apps/postgresql/namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: postgresql
+  labels:
+    name: postgresql
+    app.kubernetes.io/part-of: data-platform
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"  # Deploy before other services

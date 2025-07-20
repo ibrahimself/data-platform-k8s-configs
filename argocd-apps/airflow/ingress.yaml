@@ -1,0 +1,24 @@
+# argocd-apps/airflow/ingress.yaml
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: airflow-webserver
+  namespace: airflow
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      - path: /airflow
+        pathType: Prefix
+        backend:
+          service:
+            name: airflow-webserver
+            port:
+              number: 8080

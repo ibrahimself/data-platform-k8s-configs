@@ -1,0 +1,65 @@
+---
+# Grafana with subpath
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grafana
+  namespace: monitoring
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      - path: /grafana
+        pathType: Prefix
+        backend:
+          service:
+            name: prometheus-stack-grafana
+            port:
+              number: 80
+---
+# Prometheus (works without config changes)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: prometheus
+  namespace: monitoring
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      - path: /prometheus(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: prometheus-stack-kube-prom-prometheus
+            port:
+              number: 9090
+---
+# AlertManager
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: alertmanager
+  namespace: monitoring
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      - path: /alertmanager(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: prometheus-stack-kube-prom-alertmanager
+            port:
+              number: 9093
