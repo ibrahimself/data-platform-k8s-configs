@@ -1,0 +1,516 @@
+#
+# Copyright (C) 2017-2019 Dremio Corporation. This file is confidential and private property.
+#
+
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#                     ____ _____ ___  ____  _                         #
+#                    / ___|_   _/ _ \|  _ \| |                        #
+#                    \___ \ | || | | | |_) | |                        #
+#                     ___) || || |_| |  __/|_|                        #
+#                    |____/ |_| \___/|_|   (_)                        #
+#                                                                     #
+#           !!!   DO NOT DIRECTLY EDIT THIS FILE   !!!                #
+# !!!   create a separate file to override values in this file   !!!  #
+#                                                                     #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+
+imagePullSecrets: []
+writeLogsToFile: true
+
+dremio:
+  trialImagePullCredentials: ""
+  license: ""
+  image:
+    repository: quay.io/dremio/dremio-enterprise
+    tag: 26.0.1
+    pullPolicy: IfNotPresent
+  dremioConfExtraOptions: {}
+  advancedConfigs: {}
+  hive2ConfigFiles: {}
+  hive3ConfigFiles: {}
+  configFiles: {}
+  configBinaries: {}
+
+busyBox:
+  image:
+    repository: quay.io/dremio/busybox
+    tag: 1.37.0-glibc
+    pullPolicy: IfNotPresent
+
+k8s:
+  image:
+    repository: quay.io/dremio/alpine/k8s
+    tag: "1.32.2"
+    pullPolicy: IfNotPresent
+
+annotations: {}
+podAnnotations: {}
+labels: {}
+podLabels: {}
+nodeSelector: {}
+tolerations: []
+
+coordinator:
+  resources:
+    requests:
+      cpu: "32"
+      memory: "64Gi"
+    limits:
+      memory: "64Gi"
+  count: 0
+  volumeSize: 512Gi
+  serviceAccount: dremio-coordinator
+  autoUpgrade: true
+  web:
+    auth:
+      enabled: true
+      type: "internal"
+    port: 9047
+    tls:
+      enabled: false
+      secret: dremio-tls-secret-ui
+  client:
+    port: 31010
+    tls:
+      enabled: false
+      secret: dremio-tls-secret-client
+  flight:
+    port: 32010
+    tls:
+      enabled: false
+      secret: dremio-tls-secret-flight
+  startupProbe:
+    failureThreshold: 30
+    periodSeconds: 10
+  livenessProbe:
+    failureThreshold: 30
+    periodSeconds: 10
+  readinessProbe:
+    failureThreshold: 12
+    periodSeconds: 10
+
+executor:
+  resources:
+    requests:
+      cpu: "16"
+      memory: "128Gi"
+    limits:
+      memory: "128Gi"
+  engines: []
+  count: 3
+  volumeSize: 128Gi
+  serviceAccount: dremio-executor
+  cloudCache:
+    enabled: false
+    volumes:
+      - size: 100Gi
+
+engine:
+  options:
+    sizes:
+      - name: 2XSmall
+        cpuScaleFactor: 0.5
+        pods: 1
+        memory: 64Gi
+      - name: XSmall
+        pods: 1
+        memory: 128Gi
+      - name: Small
+        pods: 2
+        memory: 128Gi
+      - name: Medium
+        pods: 4
+        memory: 128Gi
+      - name: Large
+        pods: 8
+        memory: 128Gi
+      - name: XLarge
+        pods: 12
+        memory: 128Gi
+      - name: 2XLarge
+        pods: 16
+        memory: 128Gi
+      - name: 3XLarge
+        pods: 24
+        memory: 128Gi
+      - name: 4XLarge
+        pods: 32
+        memory: 128Gi
+    targetCpuCapacities:
+      capacities:
+        - name: 16C
+          cpu: 16
+        - name: 32C
+          cpu: 32
+      defaultCapacity: 32C
+    resourceAllocationOffsets:
+      offsets:
+        - name: reserve-0-0
+          cpu: 0
+          memory: 0Gi
+          action: Reserve
+        - name: reserve-2-4
+          cpu: 2
+          memory: 4Gi
+          action: Reserve
+        - name: reserve-2-8
+          cpu: 2
+          memory: 8Gi
+          action: Reserve
+        - name: reserve-2-16
+          cpu: 2
+          memory: 16Gi
+          action: Reserve
+      defaultOffset: reserve-2-8
+    storage:
+      spillStorageSizes:
+        - name: 100GB
+          storage: 100Gi
+        - name: 250GB
+          storage: 250Gi
+        - name: 500GB
+          storage: 500Gi
+      defaultSpillStorageSize: 100GB
+      c3StorageSizes:
+        - name: 100GB
+          storage: 100Gi
+        - name: 250GB
+          storage: 250Gi
+        - name: 500GB
+          storage: 500Gi
+      defaultC3StorageSize: 100GB
+    idleTimeouts:
+      durations:
+        - PT2H
+        - PT1H30M
+        - PT1H
+        - PT30M
+        - PT15M
+        - PT10M
+        - PT5M
+      defaultDuration: PT15M
+      maximumDuration: PT12H
+  operator:
+    image:
+      repository: quay.io/dremio/dremio-engine-operator
+      tag: 26.0.1
+      pullPolicy: IfNotPresent
+    serviceAccount: dremio-engine-operator
+  executor:
+    serviceAccount: dremio-engine-executor
+
+zookeeper:
+  image:
+    repository: quay.io/dremio/zookeeper
+    tag: 3.8.4-jre-17
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      memory: "1Gi"
+  count: 3
+  volumeSize: 10Gi
+
+distStorage:
+  type: ""
+  gcp:
+    bucketName: ""
+    path: "/"
+    authentication: "auto"
+  aws:
+    bucketName: ""
+    path: "/"
+    authentication: "metadata"
+
+  azureStorage:
+    accountName: ""
+    authentication: "accessKey"
+    filesystem: ""
+    path: "/"
+
+initResources:
+  requests:
+    cpu: 10m
+    memory: 10Mi
+  limits:
+    memory: 512Mi
+
+extraVolumes: []
+
+extraVolumeMounts: []
+
+extraEnvs: []
+
+service:
+  type: LoadBalancer
+
+ddc:
+  allowCollectOnAllPods: true
+  namespaceDiagnostics: true
+  k8sClusterDiagnostic: false
+
+catalog:
+  image:
+    repository: quay.io/dremio/dremio-catalog-server
+    tag: 26.0.1
+    pullPolicy: IfNotPresent
+  replicas: 1
+  serviceAccount: dremio-catalog-server
+  nodeSelector: {}
+  extraEnv: []
+  extraVolumeMounts: []
+  extraVolumes: []
+  resources:
+    requests:
+      cpu: "4"
+      memory: "8Gi"
+    limits:
+      memory: "8Gi"
+  externalAccess:
+    enabled: true
+    image:
+      repository: quay.io/dremio/dremio-catalog-server-external
+      tag: 26.0.1
+      pullPolicy: IfNotPresent
+    replicas: 1
+    authentication:
+      authServerHostname: dremio-master-0.dremio-cluster-pod.{{ .Release.Namespace
+        }}.svc.cluster.local
+      disableHostnameVerification: false
+    tls:
+      enabled: false
+      secret: dremio-tls-secret-catalog
+    nodeSelector: {}
+  storage:
+    location:
+    type:
+    s3:
+      region:
+      roleArn:
+      userArn:
+      externalId:
+      endpoint:
+      stsEndpoint:
+      pathStyleAccess: false
+      skipSts: false
+      useAccessKeys: false
+      secretName:
+    azure:
+      tenantId:
+      multiTenantAppName:
+      useClientSecrets: false
+      secretName:
+    gcs:
+      serviceAccount:
+      useCredentialsFile: false
+      secretName:
+
+catalogservices:
+  enabled: true
+  nodeSelector: {}
+  image:
+    repository: quay.io/dremio/dremio-catalog-services-server
+    tag: 26.0.1
+    pullPolicy: IfNotPresent
+  serviceAccount: dremio-catalog-services
+  replicas: 1
+  resources:
+    requests:
+      cpu: "4"
+      memory: "8Gi"
+    limits:
+      memory: "8Gi"
+
+mongodb:
+  image:
+    repository: quay.io/dremio/percona/percona-server-mongodb
+    tag: 8.0.4-1-multi
+    pullPolicy: IfNotPresent
+  serviceAccount: dremio-mongodb
+  replicaCount: 3
+  labels: {}
+  annotations: {}
+  nodeSelector: {}
+  affinity: {}
+  topologySpreadConstraints: []
+  tolerations: []
+  priorityClassName:   # high-priority
+  podDisruptionBudget: {}
+  resources:
+    requests:
+      cpu: 2
+      memory: 2Gi
+    limits:
+      cpu: 4
+      memory: 2Gi
+  enableVolumeExpansion: false
+  storage:
+    annotations: {}
+    labels: {}
+    resources:
+      requests:
+        storage: 512Gi
+    accessModes:
+      - ReadWriteOnce
+
+mongodbOperator:
+  image:
+    repository: quay.io/dremio/dremio-mongodb-operator
+    tag: 1.19.1-dremio-20250319164744-5670cbfe
+  fullnameOverride: "dremio-mongodb-operator"
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1001
+    runAsGroup: 1001
+    fsGroup: 1001
+    fsGroupChangePolicy: "OnRootMismatch"
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    seccompProfile:
+      type: RuntimeDefault
+  serviceAccount:
+    create: false
+    annotations: {}
+  annotations: {}
+  labels: {}
+  podAnnotations: {}
+  podLabels: {}
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+opensearchOperator:
+  useRoleBindings: true
+  manager:
+    image:
+      repository: quay.io/dremio/dremio-opensearch-operator
+      tag: "2.7.0-dremio-20250404143134-f33f265"
+  serviceAccount:
+    create: false
+    name: dremio-opensearch-operator
+  kubeRbacProxy:
+    image:
+      repository: "quay.io/dremio/kubebuilder/kube-rbac-proxy"
+      tag: "v0.15.0"
+
+opensearch:
+  enabled: true
+  clusterName: "opensearch-cluster"
+  serviceName: "opensearch-cluster"
+  serviceAccount: opensearch-cluster
+  nodeSelector: {}
+  image:
+    repository: quay.io/dremio/dremio-search-opensearch
+    tag: 26.0.1
+  version: "2.19.2"
+  replicas: 3
+  affinity: {}
+  volumeSize: "100Gi"
+  storageClass: ""
+  opensearchJavaOpts: "-XX:InitialRAMPercentage=70.0 -XX:MaxRAMPercentage=70.0"
+  resources:
+    requests:
+      memory: "16Gi"
+      cpu: "2"
+    limits:
+      memory: "16Gi"
+      cpu: "2"
+
+  tlsCertsSecretName: opensearch-tls-certs
+  disableTlsCertGeneration: false
+  initialAdminPassword: admin
+
+  oidcProxy:
+    nodeSelector: {}
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "500m"
+        memory: "256Mi"
+
+  preInstallJob:
+    image:
+      repository: quay.io/dremio/dremio-search-init
+      tag: 26.0.1
+    nodeSelector: {}
+  enableHttpBasicAuth: true
+
+nats:
+  enabled: true
+  config:
+    jetstream:
+      enabled: true
+      fileStore:
+        pvc:
+          size: 2Gi
+    cluster:
+      enabled: true
+      replicas: 3
+  container:
+    image:
+      repository: quay.io/dremio/nats
+      tag: 2.11.1-alpine
+      pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1024Mi"
+      ephemeral-storage: "50Mi"
+    limits:
+      cpu: "750m"
+      memory: "1536Mi"
+      ephemeral-storage: "2Gi"
+  reloader:
+    enabled: true
+    image:
+      repository: quay.io/dremio/natsio/nats-server-config-reloader
+      tag: 0.17.1
+  natsBox:
+    enabled: true
+    container:
+      image:
+        repository: quay.io/dremio/natsio/nats-box
+        tag: 0.17.0
+
+telemetry:
+  enabled: true
+  endpoint: observability.dremio.com:443
+  bodySizeLimit: 10MiB
+  sendBatchMaxSize: 8192
+  metrics:
+    scrapeInterval:
+      cluster: 5m
+      app: 1m
+
+  image:
+    repository: quay.io/dremio/otel/opentelemetry-collector-contrib
+    tag: 0.117.0
+    pullPolicy: IfNotPresent
+  goMemLimit: "1638MiB"
+  resources:
+    requests:
+      cpu: "1"
+      memory: "1Gi"
+    limits:
+      cpu: "2"
+      memory: "2Gi"
+  extraEnvs: []
+  nodeSelector: {}
