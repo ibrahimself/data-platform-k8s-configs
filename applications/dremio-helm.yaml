@@ -7,14 +7,14 @@ metadata:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: data-platform
-  source:  # Note: "source" not "sources"
+  source:
     repoURL: git@github.com:ibrahimself/data-platform-k8s-configs.git
     targetRevision: HEAD
-    path: charts/dremio-helm  # Path to the chart in your Git repo
+    path: charts/dremio-helm
     helm:
       releaseName: dremio-enterprise
       valueFiles:
-        - ../../values/dremio-values.yaml  # Path relative to the chart
+        - ../../values/dremio-values.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: dremio
@@ -26,4 +26,11 @@ spec:
     syncOptions:
       - CreateNamespace=false
       - ServerSideApply=true
+      - Replace=true  # Add this to replace existing resources
       - PrunePropagationPolicy=foreground
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
