@@ -1,57 +1,47 @@
 # Spark Operator Configuration for Data Platform
+# Compatible with spark-operator chart v2.x
 
-# Spark operator image
+# Image configuration
 image:
-  repository: gcr.io/spark-operator/spark-operator
-  tag: v1beta2-1.3.8-3.1.1
+  repository: kubeflow/spark-operator
+  tag: v2.1.0-release
   pullPolicy: IfNotPresent
 
-# Spark job namespace (where Spark applications will run)
-sparkJobNamespace: spark
-
-# Enable webhook for validation
+# Webhook configuration
 webhook:
   enable: true
-  port: 8080
-  namespaceSelector:
-    matchLabels:
-      spark-webhook: enabled
+  port: 443
 
-# Resource quotas and limits
-resourceQuotaEnforcement:
-  enable: false
-
-# Controller settings
-controllerThreads: 10
-resyncInterval: 30
-
-# Enable batch scheduler (for advanced scheduling)
-batchScheduler:
-  enable: false
-  # Options: volcano, yunikorn
-  # schedulerName: volcano
-
-# Metrics configuration
-metrics:
-  enable: true
-  port: 10254
-  endpoint: /metrics
-  prefix: ""
-
-# Service Accounts
+# Service account configuration
 serviceAccounts:
   spark:
     create: true
     name: spark
+    automountServiceAccountToken: true
   sparkoperator:
     create: true
     name: spark-operator
+    automountServiceAccountToken: true
 
-# RBAC
+# RBAC configuration
 rbac:
   create: true
-  createRole: true
   createClusterRole: true
+  createRole: true
+
+# Controller configuration
+controller:
+  # Number of worker threads
+  workers: 10
+  # Resync interval
+  resyncInterval: 30s
+  # Queue configuration
+  queueConfig:
+    qps: 50
+    burst: 500
+    maxDelay:
+      enable: true
+      duration: 6h
 
 # Resources for the operator pod
 resources:
@@ -64,34 +54,32 @@ resources:
 
 # Node selector for operator pod
 nodeSelector: {}
-# Example usage:
-# nodeSelector:
-#   node-group: system
 
 # Pod security context
 securityContext:
+  runAsNonRoot: true
   runAsUser: 1000
   runAsGroup: 1000
   fsGroup: 1000
 
-# Spark application defaults
-sparkApplicationDefaults:
-  sparkVersion: "3.5.3"
-  sparkImage: "apache/spark:3.5.3"
-  imagePullPolicy: "IfNotPresent"
-  restartPolicy:
-    type: OnFailure
-    onFailureRetries: 3
-    onFailureRetryInterval: 10
-    onSubmissionFailureRetries: 5
-    onSubmissionFailureRetryInterval: 20
+# Spark job namespaces
+spark:
+  jobNamespaces:
+    - spark
 
-# Enable monitoring
-prometheus:
-  metrics:
+# Metrics configuration
+metrics:
+  enable: true
+  port: 10254
+  endpoint: /metrics
+  prometheus:
     enable: true
     port: 10254
     endpoint: /metrics
+
+# Prometheus ServiceMonitor
+prometheus:
+  enable: true
   serviceMonitor:
     enable: true
     labels:
@@ -104,11 +92,6 @@ logLevel: info
 # Leader election (for HA)
 leaderElection:
   enable: true
-  lockName: spark-operator-lock
-  lockNamespace: spark
-
-# Ingress class to add to Spark UI services
-ingressUrlFormat: ""
 
 # Environment variables for the operator
 env: []
@@ -134,9 +117,24 @@ podAnnotations: {}
 # Pod labels
 podLabels: {}
 
-# Enable CRD creation (should be true for initial install)
-createCRD: true
+# Enable batch scheduler integration
+batchScheduler:
+  enable: false
 
-# Time to live for Spark UI service
-uiService:
-  enable: true
+# Resource quota enforcement
+resourceQuotaEnforcement:
+  enable: false
+
+# Ingress URL format
+ingressUrlFormat: ""
+
+# Time to live for completed SparkApplication objects
+timeToLiveSeconds:
+  enable: false
+  value: 86400
+
+# Default Spark configuration
+sparkDefaults: |
+  spark.eventLog.enabled=true
+  spark.eventLog.dir=file:///tmp/spark-events
+  spark.history.fs.logDirectory=file:///tmp/spark-events

@@ -15,7 +15,7 @@ spec:
     # Source 2: Helm chart from Kubeflow
     - repoURL: https://kubeflow.github.io/spark-operator
       chart: spark-operator
-      targetRevision: 1.1.27  # Latest version for Spark 3.5.x support
+      targetRevision: 2.1.0  # Updated to latest stable version
       helm:
         releaseName: spark-operator
         valueFiles:
@@ -30,7 +30,6 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
-  # Sync wave - deploy after other base services
   info:
     - name: 'sync-wave'
       value: '20'
