@@ -20,7 +20,7 @@ spec:
           tag: v1beta2-1.3.8-3.1.1
           pullPolicy: IfNotPresent
         
-        # Basic configuration only
+        # Basic configuration
         sparkJobNamespace: spark
         
         webhook:
@@ -34,6 +34,54 @@ spec:
         
         rbac:
           create: true
+        
+        # Enable metrics for Prometheus
+        metrics:
+          enable: true
+          port: 10254
+          endpoint: /metrics
+          prefix: ""
+        
+        # Prometheus monitoring configuration
+        prometheus:
+          metrics:
+            enable: true
+            port: 10254
+            endpoint: /metrics
+          serviceMonitor:
+            enable: true
+            # Labels must match your Prometheus ServiceMonitor selector
+            labels:
+              prometheus: kube-prometheus-stack
+              release: prometheus  # Adjust based on your Prometheus installation
+            interval: 30s
+            scrapeTimeout: 10s
+            # Additional labels for the ServiceMonitor
+            additionalLabels: {}
+            # Metric relabeling configurations
+            metricRelabelings: []
+            # Relabeling configurations
+            relabelings: []
+        
+        # Controller threads for performance
+        controllerThreads: 10
+        
+        # Resources
+        resources:
+          requests:
+            cpu: 100m
+            memory: 300Mi
+          limits:
+            cpu: 200m
+            memory: 500Mi
+        
+        # Log level
+        logLevel: info
+        
+        # Pod labels for better monitoring
+        podLabels:
+          monitoring: "true"
+          app.kubernetes.io/component: "spark-operator"
   destination:
     server: https://kubernetes.default.svc
     namespace: spark
@@ -46,4 +94,4 @@ spec:
       - ServerSideApply=true
   info:
     - name: 'sync-wave'
-      value: '20'
+      value
