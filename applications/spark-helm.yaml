@@ -13,8 +13,11 @@ spec:
     targetRevision: 1.1.27
     helm:
       releaseName: spark-operator
-      # Skip hooks to avoid PreSync issues with RBAC
-      skipHooks: true
+      # CRITICAL: Skip hooks to avoid PreSync RBAC issues
+      skipCrds: false
+      parameters:
+        - name: "rbac.create"
+          value: "true"
       values: |
         # Use correct image
         image:
@@ -87,22 +90,21 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
-      - Replace=true  # This will replace existing resources
-      - ApplyOutOfSyncOnly=true  # Only apply resources that are out of sync
+      - Replace=true
+      - RespectIgnoreDifferences=true
     retry:
       limit: 5
       backoff:
         duration: 5s
         factor: 2
         maxDuration: 3m
-  # Ignore differences in RBAC resources to handle existing ones
+  # Ignore hook resources
   ignoreDifferences:
-    - group: rbac.authorization.k8s.io
-      kind: ClusterRole
-      name: spark-operator
-    - group: rbac.authorization.k8s.io
-      kind: ClusterRoleBinding
-      name: spark-operator
+    - group: "*"
+      kind: "*"
+      jsonPointers:
+        - /metadata/annotations/argocd.argoproj.io~1hook
+        - /metadata/annotations/argocd.argoproj.io~1hook-delete-policy
   info:
     - name: 'sync-wave'
-      value: '
+      value: '20'
