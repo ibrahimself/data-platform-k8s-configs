@@ -7,10 +7,19 @@ metadata:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: data-platform
-  source:
-    repoURL: git@github.com:ibrahimself/data-platform-k8s-configs.git
-    targetRevision: HEAD
-    path: resources/dremio
+  sources:
+    # Source 1: Git repo for values and secrets
+    - repoURL: git@github.com:ibrahimself/data-platform-k8s-configs.git
+      targetRevision: HEAD
+      ref: values
+    # Source 2: Dremio Helm chart from OCI registry
+    - repoURL: registry-1.docker.io
+      chart: dremio/dremio-enterprise
+      targetRevision: 3.0.2
+      helm:
+        releaseName: dremio
+        valueFiles:
+          - $values/values/dremio-values.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: dremio
@@ -21,14 +30,7 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
-      - Replace=true  # This forces replacement of resources that can't be updated
-    retry:
-      limit: 5
-      backoff:
-        duration: 5s
-        factor: 2
-        maxDuration: 3m
-  # Sync wave - deploy after PostgreSQL
+      - Replace=true
   info:
     - name: 'sync-wave'
       value: '15'
