@@ -11,7 +11,7 @@ dremio:
 
 # Image Pull Secrets
 imagePullSecrets:
-  - i-bouabdallaoui-pull-secret
+  - dremio-pull-secret
 
 # Coordinator Configuration
 coordinator:
