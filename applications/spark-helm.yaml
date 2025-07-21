@@ -10,19 +10,19 @@ spec:
   source:
     repoURL: https://kubeflow.github.io/spark-operator
     chart: spark-operator
-    targetRevision: 2.1.0
+    targetRevision: 1.1.27  # Keep the version you originally specified
     helm:
       releaseName: spark-operator
       values: |
-        # Image configuration
+        # CRITICAL: Use the correct image repository and tag
         image:
-          repository: kubeflow/spark-operator
-          tag: v2.1.0-release
+          repository: gcr.io/spark-operator/spark-operator
+          tag: v1beta2-1.3.8-3.1.1  # This is a known working tag
           pullPolicy: IfNotPresent
         
         # Webhook configuration
         webhook:
-          enable: true
+          enable: false  # Disable initially to simplify deployment
           port: 443
         
         # Service account configuration
@@ -41,8 +41,8 @@ spec:
           createRole: true
         
         # Controller configuration
-        controller:
-          workers: 10
+        controllerThreads: 10
+        resyncInterval: 30
         
         # Resources
         resources:
@@ -58,22 +58,40 @@ spec:
           enable: true
           port: 10254
           endpoint: /metrics
-          prometheus:
+          prefix: ""
+        
+        # Prometheus monitoring
+        prometheus:
+          metrics:
             enable: true
             port: 10254
             endpoint: /metrics
+          serviceMonitor:
+            enable: true
+            labels:
+              prometheus: kube-prometheus-stack
+            interval: 30s
         
         # Log level
         logLevel: info
         
-        # Enable leader election
+        # Leader election
         leaderElection:
           enable: true
+          lockName: spark-operator-lock
+          lockNamespace: spark
         
         # Spark job namespace
-        spark:
-          jobNamespaces:
-            - spark
+        sparkJobNamespace: spark
+        
+        # Pod security context
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+          fsGroup: 1000
+        
+        # Enable CRD creation
+        createCRD: true
   destination:
     server: https://kubernetes.default.svc
     namespace: spark
@@ -84,7 +102,6 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
-      - Replace=true  # This will replace existing resources
     retry:
       limit: 5
       backoff:
