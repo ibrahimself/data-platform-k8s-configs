@@ -12,10 +12,10 @@ spec:
     - repoURL: git@github.com:ibrahimself/data-platform-k8s-configs.git
       targetRevision: HEAD
       ref: values
-    # Source 2: Dremio Helm chart from Quay.io OCI registry
-    - repoURL: oci://quay.io/dremio/dremio-helm
-      chart: dremio-helm
-      targetRevision: "3.0.1"  # Use appropriate version
+    # Source 2: Dremio Helm chart - using direct OCI reference
+    - chart: dremio-helm
+      repoURL: quay.io
+      targetRevision: "3.0.2"  # Use appropriate version
       helm:
         releaseName: dremio-enterprise
         valueFiles:
@@ -29,7 +29,7 @@ spec:
       selfHeal: true
       allowEmpty: false
     syncOptions:
-      - CreateNamespace=false  # We create it separately
+      - CreateNamespace=false
       - ServerSideApply=true
       - PrunePropagationPolicy=foreground
     retry:
