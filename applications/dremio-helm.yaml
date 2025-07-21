@@ -7,19 +7,14 @@ metadata:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: data-platform
-  sources:
-    # Source 1: Git repo for values
-    - repoURL: git@github.com:ibrahimself/data-platform-k8s-configs.git
-      targetRevision: HEAD
-      ref: values
-    # Source 2: Dremio Helm chart from OCI
-    - repoURL: quay.io
-      chart: dremio/dremio-helm
-      targetRevision: "3.0.1"
-      helm:
-        releaseName: dremio-enterprise
-        valueFiles:
-          - $values/values/dremio-values.yaml
+  source:  # Note: "source" not "sources"
+    repoURL: git@github.com:ibrahimself/data-platform-k8s-configs.git
+    targetRevision: HEAD
+    path: charts/dremio-helm  # Path to the chart in your Git repo
+    helm:
+      releaseName: dremio-enterprise
+      valueFiles:
+        - ../../values/dremio-values.yaml  # Path relative to the chart
   destination:
     server: https://kubernetes.default.svc
     namespace: dremio
@@ -32,9 +27,3 @@ spec:
       - CreateNamespace=false
       - ServerSideApply=true
       - PrunePropagationPolicy=foreground
-    retry:
-      limit: 5
-      backoff:
-        duration: 5s
-        factor: 2
-        maxDuration: 3m
