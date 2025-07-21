@@ -14,91 +14,26 @@ spec:
     helm:
       releaseName: spark-operator
       values: |
-        # Use correct image that exists
+        # Use correct image
         image:
           repository: gcr.io/spark-operator/spark-operator
           tag: v1beta2-1.3.8-3.1.1
           pullPolicy: IfNotPresent
         
-        # Webhook configuration - disabled initially
+        # Basic configuration only
+        sparkJobNamespace: spark
+        
         webhook:
           enable: false
         
-        # Service accounts
         serviceAccounts:
           spark:
             create: true
-            name: spark
           sparkoperator:
             create: true
-            name: spark-operator
         
-        # RBAC
         rbac:
           create: true
-          createClusterRole: true
-          createRole: true
-        
-        # Controller settings
-        controllerThreads: 10
-        resyncInterval: 30
-        
-        # Resources
-        resources:
-          requests:
-            cpu: 100m
-            memory: 300Mi
-          limits:
-            cpu: 200m
-            memory: 500Mi
-        
-        # Metrics
-        metrics:
-          enable: true
-          port: 10254
-          endpoint: /metrics
-        
-        # Prometheus
-        prometheus:
-          metrics:
-            enable: true
-            port: 10254
-            endpoint: /metrics
-          serviceMonitor:
-            enable: true
-            labels:
-              prometheus: kube-prometheus-stack
-            interval: 30s
-        
-        # FIXED: Remove security context with fsGroup
-        # The Helm chart might be applying this at container level
-        # which doesn't support fsGroup
-        
-        # Other settings
-        logLevel: info
-        sparkJobNamespace: spark
-        createCRD: true
-        
-        # Leader election
-        leaderElection:
-          enable: true
-          lockName: spark-operator-lock
-          lockNamespace: spark
-        
-        # Pod labels
-        podLabels: {}
-        
-        # Pod annotations
-        podAnnotations: {}
-        
-        # Node selector
-        nodeSelector: {}
-        
-        # Affinity
-        affinity: {}
-        
-        # Tolerations
-        tolerations: []
   destination:
     server: https://kubernetes.default.svc
     namespace: spark
@@ -109,12 +44,6 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
-    retry:
-      limit: 5
-      backoff:
-        duration: 5s
-        factor: 2
-        maxDuration: 3m
   info:
     - name: 'sync-wave'
-      value: '
+      value: '20'
