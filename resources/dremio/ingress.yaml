@@ -1,5 +1,4 @@
-# argocd-apps/dremio/ingress.yaml
----
+# Dremio ingress with path-based routing to avoid conflicts
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -10,12 +9,14 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-body-size: "0"  # Disable body size limit for large queries
     nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+    # Dremio doesn't work well with path rewrites, so we use a subdomain or port-forward
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
 spec:
   ingressClassName: nginx
   rules:
   - http:
       paths:
-      - path: /
+      - path: /dremio(/|$)(.*)
         pathType: Prefix
         backend:
           service:
