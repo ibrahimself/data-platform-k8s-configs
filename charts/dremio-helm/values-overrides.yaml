@@ -98,7 +98,7 @@ catalog:
         <name>fs.s3a.path.style.access</name>
         <value>true</value>
       </property>
-      
+
 # Service Configuration
 service:
   type: LoadBalancer  # or ClusterIP if using Ingress
@@ -122,13 +122,8 @@ ingress:
 
 # Production Resources Configuration
 opensearch:
-  enabled: true
-  resources:
-    requests:
-      memory: 16Gi
-      cpu: 2
-  volumeSize: 100Gi
-  replicas: 3
+  enabled: false
+  replicas: 0
 
 mongodb:
   resources:
