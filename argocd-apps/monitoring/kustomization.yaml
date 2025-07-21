@@ -4,23 +4,13 @@ kind: Kustomization
 
 namespace: monitoring
 
-# Create namespace and other resources first
+# Just deploy your local resources
 resources:
   - namespace.yaml
   - ingress.yaml
-  # - ingress-simple.yaml  # Removed duplicate, pick one ingress
+  - helm-application.yaml  # New file that defines the Helm deployment
 
-# Deploy kube-prometheus-stack via Helm
-helmCharts:
-  - name: kube-prometheus-stack
-    repo: https://prometheus-community.github.io/helm-charts
-    version: 56.6.2
-    releaseName: prometheus-stack
-    namespace: monitoring
-    valuesFile: values.yaml
-    includeCRDs: true
-
-# Common labels for all resources
+# Common labels
 commonLabels:
   app.kubernetes.io/part-of: data-platform
   app.kubernetes.io/managed-by: argocd
