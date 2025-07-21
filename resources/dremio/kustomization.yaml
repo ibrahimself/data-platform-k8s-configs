@@ -5,10 +5,10 @@ namespace: dremio
 
 resources:
   - namespace.yaml
-  - image-pull-secret.yaml
-  - dremio-deployment.yaml  # New deployment file
-  - ingress.yaml
-  - servicemonitor.yaml
+  - dremio-deployment.yaml  # Using OSS version, no auth needed
+  # - image-pull-secret.yaml  # Not needed for OSS
+  - ingress.yaml  # Disabled due to conflicts
+  # - servicemonitor.yaml  # Enable after Dremio is running
 
 # Common labels
 commonLabels:

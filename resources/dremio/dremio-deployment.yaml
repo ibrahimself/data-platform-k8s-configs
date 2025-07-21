@@ -1,6 +1,5 @@
-# Dremio Deployment with reduced resource requirements for small clusters
+# Dremio OSS Deployment (no authentication required)
 ---
-# ConfigMap for Dremio configuration
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -12,39 +11,23 @@ data:
       local: "/opt/dremio/data"
       dist: "pdfs:///opt/dremio/data/dist"
     }
-    
     services: {
-      coordinator: {
-        enabled: true
-        master: {
-          enabled: true
-          embedded-zookeeper: {
-            enabled: true
-            port: 2181
-          }
-        }
-        web: {
-          enabled: true
-          port: 9047
-          ssl.enabled: false
-        }
-      }
-      executor: {
-        enabled: false
-      }
+      coordinator.enabled: true
+      executor.enabled: true
+      coordinator.master.enabled: true
+      coordinator.master.embedded-zookeeper.enabled: true
     }
   dremio-env: |
-    DREMIO_MAX_HEAP_MEMORY_SIZE_MB=2048
-    DREMIO_MAX_DIRECT_MEMORY_SIZE_MB=2048
+    DREMIO_MAX_HEAP_MEMORY_SIZE_MB=4096
+    DREMIO_MAX_DIRECT_MEMORY_SIZE_MB=4096
 ---
-# Single Dremio instance (coordinator + executor combined)
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: dremio
   namespace: dremio
 spec:
-  serviceName: dremio-cluster
+  serviceName: dremio-cluster-pod
   replicas: 1
   selector:
     matchLabels:
@@ -54,26 +37,15 @@ spec:
       labels:
         app: dremio
     spec:
-      serviceAccountName: dremio
-      imagePullSecrets:
-        - name: dremio-pull-secret
-        - name: dremio-trial-pull-secret
       containers:
       - name: dremio
-        image: quay.io/dremio/dremio-enterprise:26.0.1
+        image: dremio/dremio-oss:latest
         imagePullPolicy: IfNotPresent
         env:
-        - name: DREMIO_JAVA_SERVER_EXTRA_OPTS
-          value: >-
-            -Dpaths.local=/opt/dremio/data
-            -Dservices.coordinator.enabled=true
-            -Dservices.executor.enabled=true
-            -Dservices.coordinator.master.enabled=true
-            -Dservices.coordinator.web.port=9047
-            -Xmx2g
-            -XX:MaxDirectMemorySize=2g
-        - name: DREMIO_LICENSE
-          value: "eyJraWQiOiI4MGZhMjgxYzZhZjczNDNkNTE1YTVhMzg1MDg1N2RhNmE2YmEzMTU3NWE5ZjVlZmVhMmQ4MTkyMGUyM2Q2OGY0IiwiYWxnIjoiRVMyNTYifQ.eyJpc3MiOiJEcmVtaW8iLCJzdWIiOiIwMDM1ZDAwMDA3TFRkT0VBQTEiLCJuYmYiOjE3NTI3ODA0NzYsImV4cCI6MTc1NTU0NTI3NiwiaWF0IjoxNzUyNzgwNDc2LCJqdGkiOiIxNzUyNzgwNDc2MDYyVzJjciJ9.u8bxfpQvyieeGn3H8RNIyKqbIgHR4pYO0mfBDBh23WJJw58t2WsDEhbOL6rUdfyGu4hItUtcohCoSEXMaAAolg"
+        - name: DREMIO_MAX_HEAP_MEMORY_SIZE_MB
+          value: "4096"
+        - name: DREMIO_MAX_DIRECT_MEMORY_SIZE_MB
+          value: "4096"
         ports:
         - containerPort: 9047
           name: web
@@ -81,15 +53,13 @@ spec:
           name: client
         - containerPort: 45678
           name: server
-        - containerPort: 32010
-          name: flight
         resources:
           requests:
-            cpu: 500m
-            memory: 3Gi
-          limits:
-            cpu: 2
             memory: 4Gi
+            cpu: 1
+          limits:
+            memory: 8Gi
+            cpu: 2
         volumeMounts:
         - name: dremio-config
           mountPath: /opt/dremio/conf
@@ -101,20 +71,18 @@ spec:
             port: 9047
           initialDelaySeconds: 120
           periodSeconds: 30
+          failureThreshold: 3
         readinessProbe:
           httpGet:
             path: /
             port: 9047
           initialDelaySeconds: 120
           periodSeconds: 10
+          failureThreshold: 3
       volumes:
       - name: dremio-config
         configMap:
           name: dremio-config
-      securityContext:
-        runAsUser: 999
-        runAsGroup: 999
-        fsGroup: 999
   volumeClaimTemplates:
   - metadata:
       name: dremio-data
@@ -123,50 +91,38 @@ spec:
       storageClassName: gp2
       resources:
         requests:
-          storage: 50Gi
+          storage: 20Gi
 ---
-# Service
-apiVersion: v1
-kind: Service
-metadata:
-  name: dremio-cluster
-  namespace: dremio
-spec:
-  type: ClusterIP
-  selector:
-    app: dremio
-  ports:
-  - name: web
-    port: 9047
-    targetPort: 9047
-  - name: client
-    port: 31010
-    targetPort: 31010
-  - name: flight
-    port: 32010
-    targetPort: 32010
----
-# Service for web UI
 apiVersion: v1
 kind: Service
 metadata:
   name: dremio-client
   namespace: dremio
 spec:
-  type: ClusterIP
+  ports:
+  - port: 9047
+    targetPort: 9047
+    name: web
+  - port: 31010
+    targetPort: 31010
+    name: client
+  - port: 32010
+    targetPort: 45678
+    name: flight
   selector:
     app: dremio
-  ports:
-  - name: web
-    port: 9047
-    targetPort: 9047
-  - name: flight
-    port: 32010
-    targetPort: 32010
+  type: ClusterIP
 ---
-# Service Account
 apiVersion: v1
-kind: ServiceAccount
+kind: Service
 metadata:
-  name: dremio
+  name: dremio-cluster-pod
   namespace: dremio
+spec:
+  ports:
+  - port: 9047
+    targetPort: 9047
+    name: web
+  clusterIP: None
+  selector:
+    app: dremio
