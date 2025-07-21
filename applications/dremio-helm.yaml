@@ -21,7 +21,14 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
-  # Sync wave - single app for all Dremio resources
+      - Replace=true  # This forces replacement of resources that can't be updated
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  # Sync wave - deploy after PostgreSQL
   info:
     - name: 'sync-wave'
       value: '15'
