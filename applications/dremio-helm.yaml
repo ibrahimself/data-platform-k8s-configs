@@ -13,9 +13,9 @@ spec:
       targetRevision: HEAD
       ref: values
     # Source 2: Dremio Helm chart from OCI
-    - repoURL: quay.io/dremio/dremio-helm  # No oci:// prefix for ArgoCD
-      chart: "."  # For OCI, use "." as the chart name
-      targetRevision: "3.0.1"  # Version
+    - repoURL: quay.io
+      chart: dremio/dremio-helm
+      targetRevision: "3.0.1"
       helm:
         releaseName: dremio-enterprise
         valueFiles:
