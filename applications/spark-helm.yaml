@@ -13,6 +13,8 @@ spec:
     targetRevision: 1.1.27
     helm:
       releaseName: spark-operator
+      # Skip hooks to avoid PreSync issues with RBAC
+      skipHooks: true
       values: |
         # Use correct image
         image:
@@ -50,18 +52,11 @@ spec:
             endpoint: /metrics
           serviceMonitor:
             enable: true
-            # Labels must match your Prometheus ServiceMonitor selector
             labels:
               prometheus: kube-prometheus-stack
-              release: prometheus  # Adjust based on your Prometheus installation
+              release: prometheus
             interval: 30s
             scrapeTimeout: 10s
-            # Additional labels for the ServiceMonitor
-            additionalLabels: {}
-            # Metric relabeling configurations
-            metricRelabelings: []
-            # Relabeling configurations
-            relabelings: []
         
         # Controller threads for performance
         controllerThreads: 10
@@ -92,6 +87,22 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+      - Replace=true  # This will replace existing resources
+      - ApplyOutOfSyncOnly=true  # Only apply resources that are out of sync
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  # Ignore differences in RBAC resources to handle existing ones
+  ignoreDifferences:
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: spark-operator
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
+      name: spark-operator
   info:
     - name: 'sync-wave'
-      value
+      value: '
