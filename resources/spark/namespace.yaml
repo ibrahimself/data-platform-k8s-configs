@@ -6,5 +6,6 @@ metadata:
   labels:
     name: spark
     app.kubernetes.io/part-of: data-platform
+    spark-webhook: enabled  # Required for webhook to work
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
