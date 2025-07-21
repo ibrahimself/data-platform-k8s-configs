@@ -1,0 +1,43 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: create-minio-buckets
+  namespace: minio
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+      - name: wait-for-minio
+        image: busybox:1.35
+        command: ['sh', '-c', 'until nc -z minio 9000; do echo waiting for minio; sleep 2; done;']
+      containers:
+      - name: create-buckets
+        image: minio/mc:latest
+        command:
+        - /bin/bash
+        - -c
+        - |
+          # Configure MinIO client
+          mc alias set myminio http://minio:9000 $MINIO_ACCESS_KEY $MINIO_SECRET_KEY
+          
+          # Create buckets
+          mc mb -p myminio/dremio-dist-storage
+          mc mb -p myminio/dremio-catalog
+          
+          # Set bucket policies (optional - makes them readable)
+          mc anonymous set download myminio/dremio-dist-storage
+          mc anonymous set download myminio/dremio-catalog
+          
+          echo "Buckets created successfully"
+        env:
+        - name: MINIO_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              key: accesskey
+        - name: MINIO_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              key: secretkey

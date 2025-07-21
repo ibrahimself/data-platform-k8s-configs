@@ -1,14 +1,17 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: dremio
+namespace: minio
 
 resources:
   - namespace.yaml
-  - image-pull-secret.yaml
-  - catalog-s3-secret.yaml
+  - secret.yaml
+  - pvc.yaml
+  - deployment.yaml
+  - service.yaml
   - ingress.yaml
 
 commonLabels:
   app.kubernetes.io/part-of: data-platform
   app.kubernetes.io/managed-by: argocd
+  app.kubernetes.io/name: minio

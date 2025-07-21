@@ -49,69 +49,56 @@ coordinator:
 
 # Distributed Storage Configuration (REQUIRED)
 # Choose one of: aws, azureStorage, or gcp
+# Distributed Storage Configuration - Using MinIO
 distStorage:
-  type: "aws"  # Change based on your cloud provider
-  
-  # AWS S3 Configuration
+  type: "aws"  # MinIO is S3-compatible
   aws:
-    bucketName: "your-dremio-bucket"  # CHANGE THIS
-    path: "/dremio"
-    authentication: "instanceMetadata"  # or "accessKeySecret"
-    # If using accessKeySecret, uncomment below
-    # credentials:
-    #   accessKey: "your-access-key"
-    #   secret: "your-secret"
-  
-  # # Azure Storage Configuration
-  # type: "azureStorage"
-  # azureStorage:
-  #   accountName: "your-storage-account"
-  #   authentication: "accessKey"
-  #   filesystem: "dremio-container"
-  #   path: "/"
-  #   credentials:
-  #     accessKey: "your-storage-key"
-  
-  # # GCS Configuration
-  # type: "gcp"
-  # gcp:
-  #   bucketName: "your-gcs-bucket"
-  #   path: "/"
-  #   authentication: "auto"
+    bucketName: "dremio-dist-storage"
+    path: "/"
+    authentication: "accessKeySecret"
+    credentials:
+      accessKey: "minioadmin"
+      secret: "minioadmin123"
+    # Extra properties for MinIO
+    extraProperties: |
+      <property>
+        <name>fs.s3a.endpoint</name>
+        <value>http://minio.minio.svc.cluster.local:9000</value>
+      </property>
+      <property>
+        <name>fs.s3a.path.style.access</name>
+        <value>true</value>
+      </property>
+      <property>
+        <name>dremio.s3.compat</name>
+        <value>true</value>
+      </property>
 
-# Enterprise Catalog Configuration (REQUIRED)
+# Enterprise Catalog Configuration - Using MinIO
 catalog:
   externalAccess:
     enabled: true
   
   storage:
-    # Must match your distStorage type
-    type: "S3"  # or "AZURE" or "GCS"
-    location: "s3://your-catalog-bucket/catalog"  # CHANGE THIS
+    type: "S3"
+    location: "s3://dremio-catalog/catalog"
     
-    # S3 Catalog Configuration
     s3:
-      region: "us-east-1"  # CHANGE THIS
-      roleArn: "arn:aws:iam::123456789:role/dremio-catalog-role"  # CHANGE THIS
-      userArn: "arn:aws:iam::123456789:user/dremio-catalog-user"  # CHANGE THIS
-      externalId: "dremio-catalog-external-id"  # CHANGE THIS
-      useAccessKeys: false
-    
-    # # Azure Catalog Configuration
-    # type: "AZURE"
-    # location: "abfss://container@storageaccount.dfs.core.windows.net/catalog"
-    # azure:
-    #   authentication: "accessKey"
-    #   accountName: "your-storage-account"
-    #   accountKind: "StorageV2"
-    
-    # # GCS Catalog Configuration
-    # type: "GCS"
-    # location: "gs://your-bucket/catalog"
-    # gcs:
-    #   projectId: "your-project-id"
-    #   authentication: "auto"
-
+      region: "us-east-1"  # Default region for MinIO
+      # For MinIO, we'll use access keys instead of IAM roles
+      useAccessKeys: true
+      
+    # Additional MinIO configuration
+    extraProperties: |
+      <property>
+        <name>fs.s3a.endpoint</name>
+        <value>http://minio.minio.svc.cluster.local:9000</value>
+      </property>
+      <property>
+        <name>fs.s3a.path.style.access</name>
+        <value>true</value>
+      </property>
+      
 # Service Configuration
 service:
   type: LoadBalancer  # or ClusterIP if using Ingress
