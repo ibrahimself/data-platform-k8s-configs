@@ -7,19 +7,73 @@ metadata:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: data-platform
-  sources:
-    # Source 1: Git repo for values file
-    - repoURL: git@github.com:ibrahimself/data-platform-k8s-configs.git
-      targetRevision: HEAD
-      ref: values
-    # Source 2: Helm chart from Kubeflow
-    - repoURL: https://kubeflow.github.io/spark-operator
-      chart: spark-operator
-      targetRevision: 2.1.0  # Updated to latest stable version
-      helm:
-        releaseName: spark-operator
-        valueFiles:
-          - $values/values/spark-values.yaml
+  source:
+    repoURL: https://kubeflow.github.io/spark-operator
+    chart: spark-operator
+    targetRevision: 2.1.0
+    helm:
+      releaseName: spark-operator
+      values: |
+        # Image configuration
+        image:
+          repository: kubeflow/spark-operator
+          tag: v2.1.0-release
+          pullPolicy: IfNotPresent
+        
+        # Webhook configuration
+        webhook:
+          enable: true
+          port: 443
+        
+        # Service account configuration
+        serviceAccounts:
+          spark:
+            create: true
+            name: spark
+          sparkoperator:
+            create: true
+            name: spark-operator
+        
+        # RBAC configuration
+        rbac:
+          create: true
+          createClusterRole: true
+          createRole: true
+        
+        # Controller configuration
+        controller:
+          workers: 10
+        
+        # Resources
+        resources:
+          limits:
+            cpu: 200m
+            memory: 500Mi
+          requests:
+            cpu: 100m
+            memory: 300Mi
+        
+        # Metrics
+        metrics:
+          enable: true
+          port: 10254
+          endpoint: /metrics
+          prometheus:
+            enable: true
+            port: 10254
+            endpoint: /metrics
+        
+        # Log level
+        logLevel: info
+        
+        # Enable leader election
+        leaderElection:
+          enable: true
+        
+        # Spark job namespace
+        spark:
+          jobNamespaces:
+            - spark
   destination:
     server: https://kubernetes.default.svc
     namespace: spark
@@ -30,6 +84,13 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+      - Replace=true  # This will replace existing resources
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
   info:
     - name: 'sync-wave'
       value: '20'
