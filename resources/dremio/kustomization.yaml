@@ -5,9 +5,10 @@ namespace: dremio
 
 resources:
   - namespace.yaml
-  - image-pull-secret.yaml  # Secret for pulling from quay.io
+  - image-pull-secret.yaml
+  - dremio-deployment.yaml  # New deployment file
   - ingress.yaml
-  - servicemonitor.yaml     # Prometheus monitoring
+  - servicemonitor.yaml
 
 # Common labels
 commonLabels:
