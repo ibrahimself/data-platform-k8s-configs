@@ -1,5 +1,16 @@
-# Dremio OSS Deployment with fixed permissions
+# Dremio Enterprise Deployment for Kubernetes
 ---
+# Image Pull Secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dremio-image-pull-secret
+  namespace: dremio
+data:
+  .dockerconfigjson: ewogICJhdXRocyI6IHsKICAgICJxdWF5LmlvIjogewogICAgICAiYXV0aCI6ICJaSEpsYldsdkszUnlhV0ZzWDJGalkyVnpjMTh3TjE4eE4xOHlNREkxT2s4d1dFYzRUbGhaTkZjeFFsZE9RMEk1T1VGUk1FdGFPRFpCVTB3MFFWZFdSRUl3UVVKQlRVUklSRVJZVkZwUFFqSktOVkJHVUVoSVdVWkJXVUZYUmtVPSIsCiAgICAgICJlbWFpbCI6ICIiCiAgICB9CiAgfQp9
+type: kubernetes.io/dockerconfigjson
+---
+# ConfigMap for Dremio configuration
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -8,54 +19,158 @@ metadata:
 data:
   dremio.conf: |
     paths: {
-      local: "/opt/dremio/data"
-      dist: "pdfs:///opt/dremio/data/dist"
+      # Local path for metadata storage
+      local: ${DREMIO_HOME}"/data"
+      
+      # Distributed path for shared storage
+      dist: "pdfs://"${DREMIO_HOME}"/pdfs"
     }
+    
     services: {
       coordinator.enabled: true
-      executor.enabled: true
       coordinator.master.enabled: true
-      coordinator.master.embedded-zookeeper.enabled: true
+      coordinator.master.embedded-zookeeper.enabled: false
+      executor.enabled: false
     }
+    
+    zookeeper: "zk-svc:2181"
+  
   dremio-env: |
+    # Heap memory settings
     DREMIO_MAX_HEAP_MEMORY_SIZE_MB=4096
-    DREMIO_MAX_DIRECT_MEMORY_SIZE_MB=4096
+    
+    # Direct memory settings
+    DREMIO_MAX_DIRECT_MEMORY_SIZE_MB=8192
+    
+    # GC settings
+    DREMIO_JAVA_EXTRA_OPTS="-XX:+UseG1GC -XX:G1HeapRegionSize=32M"
+  
+  core-site.xml: |
+    <?xml version="1.0"?>
+    <configuration>
+      <property>
+        <name>fs.pdfs.impl</name>
+        <value>com.dremio.plugins.s3.store.S3FileSystem</value>
+      </property>
+    </configuration>
 ---
+# ZooKeeper StatefulSet
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: dremio
+  name: zk
   namespace: dremio
 spec:
-  serviceName: dremio-cluster-pod
+  serviceName: zk-svc
   replicas: 1
   selector:
     matchLabels:
-      app: dremio
+      app: zk
   template:
     metadata:
       labels:
-        app: dremio
+        app: zk
     spec:
-      # Add init container to fix permissions
-      initContainers:
-      - name: fix-permissions
-        image: busybox:1.35
-        command: ['sh', '-c', 'chown -R 999:999 /opt/dremio/data']
-        volumeMounts:
-        - name: dremio-data
-          mountPath: /opt/dremio/data
-        securityContext:
-          runAsUser: 0  # Run as root to change permissions
       containers:
-      - name: dremio
-        image: dremio/dremio-oss:latest
+      - name: zk
+        image: zookeeper:3.8
+        ports:
+        - containerPort: 2181
+          name: client
+        - containerPort: 2888
+          name: server
+        - containerPort: 3888
+          name: leader-election
+        env:
+        - name: ZOO_MY_ID
+          value: "1"
+        - name: ZOO_SERVERS
+          value: "server.1=zk-0.zk-svc.dremio.svc.cluster.local:2888:3888;2181"
+        volumeMounts:
+        - name: datadir
+          mountPath: /data
+        - name: datalogdir
+          mountPath: /datalog
+  volumeClaimTemplates:
+  - metadata:
+      name: datadir
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: gp2
+      resources:
+        requests:
+          storage: 10Gi
+  - metadata:
+      name: datalogdir
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: gp2
+      resources:
+        requests:
+          storage: 10Gi
+---
+# ZooKeeper Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: zk-svc
+  namespace: dremio
+spec:
+  ports:
+  - port: 2181
+    name: client
+  - port: 2888
+    name: server
+  - port: 3888
+    name: leader-election
+  clusterIP: None
+  selector:
+    app: zk
+---
+# Dremio Master Coordinator StatefulSet
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: dremio-master
+  namespace: dremio
+spec:
+  serviceName: dremio-master
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dremio-coordinator
+  template:
+    metadata:
+      labels:
+        app: dremio-coordinator
+        role: dremio-master
+    spec:
+      terminationGracePeriodSeconds: 5
+      imagePullSecrets:
+      - name: dremio-image-pull-secret
+      initContainers:
+      # Wait for ZooKeeper
+      - name: wait-for-zk
+        image: busybox:1.35
+        command: ['sh', '-c', 'until nc -z zk-svc 2181; do echo waiting for zookeeper; sleep 2; done;']
+      containers:
+      - name: dremio-master
+        image: quay.io/dremio/dremio-enterprise:26.0.1
         imagePullPolicy: IfNotPresent
         env:
-        - name: DREMIO_MAX_HEAP_MEMORY_SIZE_MB
-          value: "4096"
-        - name: DREMIO_MAX_DIRECT_MEMORY_SIZE_MB
-          value: "4096"
+        - name: DREMIO_JAVA_EXTRA_OPTS
+          value: >-
+            -Dzookeeper=zk-svc:2181
+            -Dservices.coordinator.enabled=true
+            -Dservices.coordinator.master.enabled=true
+            -Dservices.executor.enabled=false
+            -Dservices.conduit.port=45678
+            -XX:+UseG1GC
+            -XX:G1HeapRegionSize=32M
+            -XX:MaxGCPauseMillis=500
+            -XX:InitiatingHeapOccupancyPercent=45
+        - name: DREMIO_LICENSE
+          value: "eyJraWQiOiI4MGZhMjgxYzZhZjczNDNkNTE1YTVhMzg1MDg1N2RhNmE2YmEzMTU3NWE5ZjVlZmVhMmQ4MTkyMGUyM2Q2OGY0IiwiYWxnIjoiRVMyNTYifQ.eyJpc3MiOiJEcmVtaW8iLCJzdWIiOiIwMDM1ZDAwMDA3TFRkT0VBQTEiLCJuYmYiOjE3NTI3ODA0NzYsImV4cCI6MTc1NTU0NTI3NiwiaWF0IjoxNzUyNzgwNDc2LCJqdGkiOiIxNzUyNzgwNDc2MDYyVzJjciJ9.u8bxfpQvyieeGn3H8RNIyKqbIgHR4pYO0mfBDBh23WJJw58t2WsDEhbOL6rUdfyGu4hItUtcohCoSEXMaAAolg"
         ports:
         - containerPort: 9047
           name: web
@@ -63,44 +178,37 @@ spec:
           name: client
         - containerPort: 45678
           name: server
-        resources:
-          requests:
-            memory: 4Gi
-            cpu: 1
-          limits:
-            memory: 8Gi
-            cpu: 2
+        - containerPort: 32010
+          name: flight
         volumeMounts:
         - name: dremio-config
           mountPath: /opt/dremio/conf
         - name: dremio-data
           mountPath: /opt/dremio/data
+        resources:
+          requests:
+            memory: 4Gi
+            cpu: 2
+          limits:
+            memory: 8Gi
+            cpu: 4
         livenessProbe:
           httpGet:
             path: /
             port: 9047
           initialDelaySeconds: 120
           periodSeconds: 30
-          failureThreshold: 3
+          failureThreshold: 120
         readinessProbe:
           httpGet:
             path: /
             port: 9047
-          initialDelaySeconds: 120
-          periodSeconds: 10
-          failureThreshold: 3
-        # Add security context
-        securityContext:
-          runAsUser: 999
-          runAsGroup: 999
-          fsGroup: 999
+          initialDelaySeconds: 60
+          periodSeconds: 5
       volumes:
       - name: dremio-config
         configMap:
           name: dremio-config
-      # Set fsGroup at pod level for volume permissions
-      securityContext:
-        fsGroup: 999
   volumeClaimTemplates:
   - metadata:
       name: dremio-data
@@ -109,12 +217,78 @@ spec:
       storageClassName: gp2
       resources:
         requests:
-          storage: 20Gi
+          storage: 40Gi
 ---
+# Dremio Executor StatefulSet
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: dremio-executor
+  namespace: dremio
+spec:
+  serviceName: dremio-executor
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dremio-executor
+  template:
+    metadata:
+      labels:
+        app: dremio-executor
+        role: dremio-executor
+    spec:
+      terminationGracePeriodSeconds: 5
+      imagePullSecrets:
+      - name: dremio-image-pull-secret
+      initContainers:
+      # Wait for Master
+      - name: wait-for-master
+        image: busybox:1.35
+        command: ['sh', '-c', 'until nc -z dremio-master 31010; do echo waiting for master coordinator; sleep 2; done;']
+      containers:
+      - name: dremio-executor
+        image: quay.io/dremio/dremio-enterprise:26.0.1
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: DREMIO_JAVA_EXTRA_OPTS
+          value: >-
+            -Dzookeeper=zk-svc:2181
+            -Dservices.coordinator.enabled=false
+            -Dservices.executor.enabled=true
+            -Dservices.conduit.port=45678
+            -XX:+UseG1GC
+            -XX:G1HeapRegionSize=32M
+        volumeMounts:
+        - name: dremio-config
+          mountPath: /opt/dremio/conf
+        - name: dremio-data
+          mountPath: /opt/dremio/data
+        resources:
+          requests:
+            memory: 4Gi
+            cpu: 2
+          limits:
+            memory: 8Gi
+            cpu: 4
+      volumes:
+      - name: dremio-config
+        configMap:
+          name: dremio-config
+  volumeClaimTemplates:
+  - metadata:
+      name: dremio-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: gp2
+      resources:
+        requests:
+          storage: 40Gi
+---
+# Dremio Master Service
 apiVersion: v1
 kind: Service
 metadata:
-  name: dremio-client
+  name: dremio-master
   namespace: dremio
 spec:
   ports:
@@ -124,23 +298,47 @@ spec:
   - port: 31010
     targetPort: 31010
     name: client
-  - port: 32010
+  - port: 45678
     targetPort: 45678
-    name: flight
+    name: server
+  clusterIP: None
   selector:
-    app: dremio
-  type: ClusterIP
+    role: dremio-master
 ---
+# Dremio Client Service
 apiVersion: v1
 kind: Service
 metadata:
-  name: dremio-cluster-pod
+  name: dremio-client
   namespace: dremio
 spec:
+  type: ClusterIP
   ports:
   - port: 9047
     targetPort: 9047
     name: web
-  clusterIP: None
+  - port: 31010
+    targetPort: 31010
+    name: client
+  - port: 32010
+    targetPort: 32010
+    name: flight
   selector:
-    app: dremio
+    app: dremio-coordinator
+---
+# Service Monitor for Prometheus
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: dremio-metrics
+  namespace: dremio
+  labels:
+    prometheus: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: dremio-coordinator
+  endpoints:
+  - port: web
+    path: /metrics
+    interval: 30s
