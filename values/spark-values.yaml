@@ -13,7 +13,7 @@ sparkJobNamespace: spark
 webhook:
   enable: true
   port: 8080
-  namespaceSelector: |
+  namespaceSelector:
     matchLabels:
       spark-webhook: enabled
 
@@ -64,7 +64,9 @@ resources:
 
 # Node selector for operator pod
 nodeSelector: {}
-  # node-group: system
+# Example usage:
+# nodeSelector:
+#   node-group: system
 
 # Pod security context
 securityContext:
