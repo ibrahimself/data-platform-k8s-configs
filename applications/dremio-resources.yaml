@@ -5,6 +5,8 @@ metadata:
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "-5"  # Deploy before Helm chart
 spec:
   project: data-platform
   source:
@@ -20,7 +22,3 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
-  # Sync wave to create namespace and secrets first
-  info:
-    - name: 'sync-wave'
-      value: '14'

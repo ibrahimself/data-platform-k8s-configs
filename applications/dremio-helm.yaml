@@ -1,23 +1,23 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: dremio
+  name: dremio-enterprise
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: data-platform
   sources:
-    # Source 1: Git repo for values and secrets
+    # Source 1: Git repo for values
     - repoURL: git@github.com:ibrahimself/data-platform-k8s-configs.git
       targetRevision: HEAD
       ref: values
-    # Source 2: Dremio Helm chart from OCI registry
-    - repoURL: registry-1.docker.io
-      chart: dremio/dremio-enterprise
-      targetRevision: 3.0.2
+    # Source 2: Dremio Helm chart from Quay.io OCI registry
+    - repoURL: oci://quay.io/dremio/dremio-helm
+      chart: dremio-helm
+      targetRevision: "3.0.1"  # Use appropriate version
       helm:
-        releaseName: dremio
+        releaseName: dremio-enterprise
         valueFiles:
           - $values/values/dremio-values.yaml
   destination:
@@ -27,10 +27,14 @@ spec:
     automated:
       prune: true
       selfHeal: true
+      allowEmpty: false
     syncOptions:
-      - CreateNamespace=true
+      - CreateNamespace=false  # We create it separately
       - ServerSideApply=true
-      - Replace=true
-  info:
-    - name: 'sync-wave'
-      value: '15'
+      - PrunePropagationPolicy=foreground
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

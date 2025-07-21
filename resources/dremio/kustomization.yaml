@@ -5,11 +5,11 @@ namespace: dremio
 
 resources:
   - namespace.yaml
-  - dremio-deployment.yaml  # Full enterprise deployment
-  - ingress.yaml  # Enable after deployment is stable
+  - image-pull-secret.yaml
+  - ingress.yaml
+  # Remove dremio-deployment.yaml as we're using Helm
+  # Ingress will be configured through Helm values
 
-# Common labels
 commonLabels:
   app.kubernetes.io/part-of: data-platform
   app.kubernetes.io/managed-by: argocd
-  app.kubernetes.io/name: dremio

@@ -1,164 +1,206 @@
-# Dremio Enterprise Values for Kubernetes
-# Reference: https://docs.dremio.com/current/admin/deployment/kubernetes/
+# Dremio Enterprise Values - Following Official Structure
+# Based on Dremio 26.x documentation
 
-# Dremio Image
-image:
-  repository: quay.io/dremio/dremio-enterprise
-  tag: 26.0.1
-  pullPolicy: IfNotPresent
+# License Configuration (Required)
+dremio:
+  license: "eyJraWQiOiI4MGZhMjgxYzZhZjczNDNkNTE1YTVhMzg1MDg1N2RhNmE2YmEzMTU3NWE5ZjVlZmVhMmQ4MTkyMGUyM2Q2OGY0IiwiYWxnIjoiRVMyNTYifQ.eyJpc3MiOiJEcmVtaW8iLCJzdWIiOiIwMDM1ZDAwMDA3TFRkT0VBQTEiLCJuYmYiOjE3NTI3ODA0NzYsImV4cCI6MTc1NTU0NTI3NiwiaWF0IjoxNzUyNzgwNDc2LCJqdGkiOiIxNzUyNzgwNDc2MDYyVzJjciJ9.u8bxfpQvyieeGn3H8RNIyKqbIgHR4pYO0mfBDBh23WJJw58t2WsDEhbOL6rUdfyGu4hItUtcohCoSEXMaAAolg"
+  
+  # Enterprise Edition image
+  image:
+    repository: quay.io/dremio/dremio-enterprise
 
 # Image Pull Secrets
 imagePullSecrets:
-- name: dremio-image-pull-secret
+  - i-bouabdallaoui-pull-secret
 
-# Dremio License
-license:
-  value: "eyJraWQiOiI4MGZhMjgxYzZhZjczNDNkNTE1YTVhMzg1MDg1N2RhNmE2YmEzMTU3NWE5ZjVlZmVhMmQ4MTkyMGUyM2Q2OGY0IiwiYWxnIjoiRVMyNTYifQ.eyJpc3MiOiJEcmVtaW8iLCJzdWIiOiIwMDM1ZDAwMDA3TFRkT0VBQTEiLCJuYmYiOjE3NTI3ODA0NzYsImV4cCI6MTc1NTU0NTI3NiwiaWF0IjoxNzUyNzgwNDc2LCJqdGkiOiIxNzUyNzgwNDc2MDYyVzJjciJ9.u8bxfpQvyieeGn3H8RNIyKqbIgHR4pYO0mfBDBh23WJJw58t2WsDEhbOL6rUdfyGu4hItUtcohCoSEXMaAAolg"
-
-# Service Account
-serviceAccount:
-  create: true
-  name: dremio
-
-# Dremio Coordinator
+# Coordinator Configuration
 coordinator:
-  count: 1
-  memory: 8192
-  cpu: 2
+  # Production resources
+  resources:
+    requests:
+      cpu: 32
+      memory: 64Gi
+    limits:
+      memory: 64Gi
   
+  # Storage
+  volumeSize: 512Gi
+  
+  # Scale-out coordinators (0 = only primary)
+  count: 0
+  
+  # Web UI Configuration
   web:
-    port: 9047
-    ssl:
+    auth:
+      enabled: true
+      type: "internal"  # Change to azuread, ldap, oauth as needed
+    tls:
       enabled: false
   
+  # Client Configuration
   client:
-    port: 31010
+    tls:
+      enabled: false
   
+  # Flight Configuration  
   flight:
-    port: 32010
-    
-  fabric:
-    port: 45678
-    
-  cloudCache:
-    enabled: false
-    
-  extraInitContainers: ""
-  
-  extraVolumes: []
-  extraVolumeMounts: []
-  
-  # Volume claim template for coordinator
-  storageClass: gp2
-  volumeSize: 50Gi
+    tls:
+      enabled: false
 
-# Dremio Executor
-executor:
-  count: 1
-  memory: 8192
-  cpu: 2
-  
-  engines: 1
-  
-  cloudCache:
-    enabled: false
-    volumes:
-    - size: 100Gi
-    
-  extraInitContainers: ""
-  
-  extraVolumes: []
-  extraVolumeMounts: []
-  
-  # Volume claim template for executors
-  storageClass: gp2
-  volumeSize: 50Gi
-
-# Zookeeper
-zookeeper:
-  enabled: true
-  count: 1
-  memory: 1024
-  cpu: 0.5
-  storageClass: gp2
-  volumeSize: 10Gi
-
-# Distributed Storage
+# Distributed Storage Configuration (REQUIRED)
+# Choose one of: aws, azureStorage, or gcp
 distStorage:
-  type: "local"
+  type: "aws"  # Change based on your cloud provider
   
-  # For AWS S3
-  # type: "aws"
-  # aws:
-  #   bucketName: "dremio-bucket"
+  # AWS S3 Configuration
+  aws:
+    bucketName: "your-dremio-bucket"  # CHANGE THIS
+    path: "/dremio"
+    authentication: "instanceMetadata"  # or "accessKeySecret"
+    # If using accessKeySecret, uncomment below
+    # credentials:
+    #   accessKey: "your-access-key"
+    #   secret: "your-secret"
+  
+  # # Azure Storage Configuration
+  # type: "azureStorage"
+  # azureStorage:
+  #   accountName: "your-storage-account"
+  #   authentication: "accessKey"
+  #   filesystem: "dremio-container"
   #   path: "/"
-  #   authentication: "instanceMetadata"
   #   credentials:
-  #     accessKey: ""
-  #     secret: ""
-
-# Service Type
-service:
-  type: ClusterIP
-  sessionAffinity: ClientIP
-
-# Ingress
-ingress:
-  enabled: false
-  class: nginx
-  annotations: {}
-
-# Annotations
-annotations: {}
-podAnnotations: {}
-
-# Tolerations
-tolerations: []
-
-# Node Selector
-nodeSelector: {}
-
-# Labels
-labels: {}
-podLabels: {}
-
-# DremioAdmin
-admin:
-  username: admin
-  firstName: Admin
-  lastName: User
-  email: admin@dremio.com
-
-# Extra Startup Params
-extraStartupParams: ""
-
-# Extra Env Variables
-extraEnvVars: []
-
-# TLS
-tls:
-  enabled: false
+  #     accessKey: "your-storage-key"
   
-# Resources
-resources:
-  coordinator:
-    memory:
-      requests: 8Gi
-      limits: 16Gi
-    cpu:
-      requests: 2
-      limits: 4
-  executor:
-    memory:
-      requests: 8Gi
-      limits: 16Gi
-    cpu:
-      requests: 2
-      limits: 4
-  zookeeper:
-    memory:
-      requests: 1Gi
-      limits: 2Gi
-    cpu:
-      requests: 0.5
-      limits: 1
+  # # GCS Configuration
+  # type: "gcp"
+  # gcp:
+  #   bucketName: "your-gcs-bucket"
+  #   path: "/"
+  #   authentication: "auto"
+
+# Enterprise Catalog Configuration (REQUIRED)
+catalog:
+  externalAccess:
+    enabled: true
+  
+  storage:
+    # Must match your distStorage type
+    type: "S3"  # or "AZURE" or "GCS"
+    location: "s3://your-catalog-bucket/catalog"  # CHANGE THIS
+    
+    # S3 Catalog Configuration
+    s3:
+      region: "us-east-1"  # CHANGE THIS
+      roleArn: "arn:aws:iam::123456789:role/dremio-catalog-role"  # CHANGE THIS
+      userArn: "arn:aws:iam::123456789:user/dremio-catalog-user"  # CHANGE THIS
+      externalId: "dremio-catalog-external-id"  # CHANGE THIS
+      useAccessKeys: false
+    
+    # # Azure Catalog Configuration
+    # type: "AZURE"
+    # location: "abfss://container@storageaccount.dfs.core.windows.net/catalog"
+    # azure:
+    #   authentication: "accessKey"
+    #   accountName: "your-storage-account"
+    #   accountKind: "StorageV2"
+    
+    # # GCS Catalog Configuration
+    # type: "GCS"
+    # location: "gs://your-bucket/catalog"
+    # gcs:
+    #   projectId: "your-project-id"
+    #   authentication: "auto"
+
+# Service Configuration
+service:
+  type: LoadBalancer  # or ClusterIP if using Ingress
+  sessionAffinity: true  # Important for scale-out coordinators
+  # For AWS EKS in Auto Mode
+  # annotations:
+  #   service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+
+# Ingress Configuration (Optional)
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: dremio.yourdomain.com  # CHANGE THIS
+      paths:
+        - /
+  tls:
+    - secretName: dremio-tls
+      hosts:
+        - dremio.yourdomain.com
+
+# Production Resources Configuration
+opensearch:
+  enabled: true
+  resources:
+    requests:
+      memory: 16Gi
+      cpu: 2
+  volumeSize: 100Gi
+  replicas: 3
+
+mongodb:
+  resources:
+    requests:
+      memory: 4Gi
+      cpu: 8
+  volumeSize: 512Gi
+  replicas: 3
+
+zookeeper:
+  resources:
+    requests:
+      memory: 1Gi
+      cpu: 500m
+  volumeSize: 10Gi
+  count: 3
+
+nats:
+  resources:
+    requests:
+      memory: 1Gi
+      cpu: 700m
+
+catalog:
+  resources:
+    requests:
+      memory: 8Gi
+      cpu: 4
+
+catalogExternalAccessServer:
+  resources:
+    requests:
+      memory: 8Gi
+      cpu: 4
+
+catalogServiceServer:
+  resources:
+    requests:
+      memory: 8Gi
+      cpu: 4
+
+engineOperator:
+  resources:
+    requests:
+      memory: 1Gi
+      cpu: 1
+
+# Engine Configuration (New Engines)
+engine:
+  options:
+    resourceAllocationOffsets:
+      defaultOffset: reserve-2-8
+
+# Telemetry
+telemetry:
+  enabled: true
+
+# Global metadata (optional)
+labels: {}
+annotations: {}
+tolerations: []
+nodeSelector: {}

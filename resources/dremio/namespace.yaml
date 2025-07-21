@@ -1,4 +1,3 @@
-# argocd-apps/dremio/namespace.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -6,5 +5,4 @@ metadata:
   labels:
     name: dremio
     app.kubernetes.io/part-of: data-platform
-  annotations:
-    argocd.argoproj.io/sync-wave: "-1"  # Create namespace first
+    app.kubernetes.io/managed-by: argocd

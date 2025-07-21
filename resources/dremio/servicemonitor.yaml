@@ -1,4 +1,3 @@
-# ServiceMonitor for Prometheus scraping
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
@@ -11,6 +10,6 @@ spec:
     matchLabels:
       app: dremio-coordinator
   endpoints:
-  - port: metrics
-    interval: 30s
+  - port: web
     path: /metrics
+    interval: 30s
