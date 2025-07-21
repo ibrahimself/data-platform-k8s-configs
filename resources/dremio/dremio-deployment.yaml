@@ -1,4 +1,4 @@
-# Dremio Enterprise deployment
+# Dremio Deployment with reduced resource requirements for small clusters
 ---
 # ConfigMap for Dremio configuration
 apiVersion: v1
@@ -15,108 +15,51 @@ data:
     
     services: {
       coordinator: {
-        enabled: true,
+        enabled: true
         master: {
-          enabled: true,
-          name: "dremio-master"
+          enabled: true
+          embedded-zookeeper: {
+            enabled: true
+            port: 2181
+          }
         }
         web: {
-          enabled: true,
-          port: 9047,
-          ssl: {
-            enabled: false
-          }
+          enabled: true
+          port: 9047
+          ssl.enabled: false
         }
       }
       executor: {
         enabled: false
       }
     }
-    
-    zookeeper: {
-      enabled: false
-    }
-  
   dremio-env: |
-    DREMIO_MAX_HEAP_MEMORY_SIZE_MB=8192
-    DREMIO_MAX_DIRECT_MEMORY_SIZE_MB=4096
-    DREMIO_JAVA_EXTRA_OPTS="-Ddremio.log.path=/opt/dremio/log"
-  
-  core-site.xml: |
-    <?xml version="1.0"?>
-    <configuration>
-    </configuration>
+    DREMIO_MAX_HEAP_MEMORY_SIZE_MB=2048
+    DREMIO_MAX_DIRECT_MEMORY_SIZE_MB=2048
 ---
-# Service Account
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: dremio
-  namespace: dremio
----
-# Coordinator Service
-apiVersion: v1
-kind: Service
-metadata:
-  name: dremio-coordinator
-  namespace: dremio
-  labels:
-    app: dremio-coordinator
-spec:
-  ports:
-  - port: 31010
-    targetPort: 31010
-    name: client
-  - port: 45678
-    targetPort: 45678
-    name: server
-  selector:
-    app: dremio-coordinator
-  type: ClusterIP
----
-# Client Service (Web UI)
-apiVersion: v1
-kind: Service
-metadata:
-  name: dremio-client
-  namespace: dremio
-  labels:
-    app: dremio-coordinator
-spec:
-  ports:
-  - port: 9047
-    targetPort: 9047
-    name: web
-  - port: 32010
-    targetPort: 32010
-    name: odbc
-  selector:
-    app: dremio-coordinator
-  type: ClusterIP
----
-# Coordinator StatefulSet
+# Single Dremio instance (coordinator + executor combined)
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: dremio-coordinator
+  name: dremio
   namespace: dremio
 spec:
-  serviceName: dremio-coordinator
+  serviceName: dremio-cluster
   replicas: 1
   selector:
     matchLabels:
-      app: dremio-coordinator
+      app: dremio
   template:
     metadata:
       labels:
-        app: dremio-coordinator
-        role: coordinator
+        app: dremio
     spec:
       serviceAccountName: dremio
       imagePullSecrets:
-      - name: dremio-pull-secret
+        - name: dremio-pull-secret
+        - name: dremio-trial-pull-secret
       containers:
-      - name: dremio-coordinator
+      - name: dremio
         image: quay.io/dremio/dremio-enterprise:26.0.1
         imagePullPolicy: IfNotPresent
         env:
@@ -124,9 +67,11 @@ spec:
           value: >-
             -Dpaths.local=/opt/dremio/data
             -Dservices.coordinator.enabled=true
-            -Dservices.executor.enabled=false
+            -Dservices.executor.enabled=true
             -Dservices.coordinator.master.enabled=true
             -Dservices.coordinator.web.port=9047
+            -Xmx2g
+            -XX:MaxDirectMemorySize=2g
         - name: DREMIO_LICENSE
           value: "eyJraWQiOiI4MGZhMjgxYzZhZjczNDNkNTE1YTVhMzg1MDg1N2RhNmE2YmEzMTU3NWE5ZjVlZmVhMmQ4MTkyMGUyM2Q2OGY0IiwiYWxnIjoiRVMyNTYifQ.eyJpc3MiOiJEcmVtaW8iLCJzdWIiOiIwMDM1ZDAwMDA3TFRkT0VBQTEiLCJuYmYiOjE3NTI3ODA0NzYsImV4cCI6MTc1NTU0NTI3NiwiaWF0IjoxNzUyNzgwNDc2LCJqdGkiOiIxNzUyNzgwNDc2MDYyVzJjciJ9.u8bxfpQvyieeGn3H8RNIyKqbIgHR4pYO0mfBDBh23WJJw58t2WsDEhbOL6rUdfyGu4hItUtcohCoSEXMaAAolg"
         ports:
@@ -137,23 +82,19 @@ spec:
         - containerPort: 45678
           name: server
         - containerPort: 32010
-          name: odbc
-        volumeMounts:
-        - name: dremio-data
-          mountPath: /opt/dremio/data
-        - name: dremio-config
-          mountPath: /opt/dremio/conf/dremio.conf
-          subPath: dremio.conf
-        - name: dremio-config
-          mountPath: /opt/dremio/conf/dremio-env
-          subPath: dremio-env
+          name: flight
         resources:
           requests:
-            cpu: 2
-            memory: 8Gi
+            cpu: 500m
+            memory: 3Gi
           limits:
-            cpu: 4
-            memory: 16Gi
+            cpu: 2
+            memory: 4Gi
+        volumeMounts:
+        - name: dremio-config
+          mountPath: /opt/dremio/conf
+        - name: dremio-data
+          mountPath: /opt/dremio/data
         livenessProbe:
           httpGet:
             path: /
@@ -170,6 +111,10 @@ spec:
       - name: dremio-config
         configMap:
           name: dremio-config
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
   volumeClaimTemplates:
   - metadata:
       name: dremio-data
@@ -178,51 +123,50 @@ spec:
       storageClassName: gp2
       resources:
         requests:
-          storage: 100Gi
+          storage: 50Gi
 ---
-# Executor Deployment
-apiVersion: apps/v1
-kind: Deployment
+# Service
+apiVersion: v1
+kind: Service
 metadata:
-  name: dremio-executor
+  name: dremio-cluster
   namespace: dremio
 spec:
-  replicas: 3
+  type: ClusterIP
   selector:
-    matchLabels:
-      app: dremio-executor
-  template:
-    metadata:
-      labels:
-        app: dremio-executor
-        role: executor
-    spec:
-      serviceAccountName: dremio
-      imagePullSecrets:
-      - name: dremio-pull-secret
-      containers:
-      - name: dremio-executor
-        image: quay.io/dremio/dremio-enterprise:26.0.1
-        imagePullPolicy: IfNotPresent
-        env:
-        - name: DREMIO_JAVA_SERVER_EXTRA_OPTS
-          value: >-
-            -Dpaths.local=/opt/dremio/data
-            -Dservices.coordinator.enabled=false
-            -Dservices.executor.enabled=true
-            -Dservices.coordinator.master.embedded-zookeeper.enabled=false
-            -Dzookeeper=dremio-coordinator:31010
-        resources:
-          requests:
-            cpu: 2
-            memory: 8Gi
-          limits:
-            cpu: 4
-            memory: 16Gi
-        volumeMounts:
-        - name: dremio-executor-data
-          mountPath: /opt/dremio/data
-      volumes:
-      - name: dremio-executor-data
-        emptyDir:
-          sizeLimit: 100Gi
+    app: dremio
+  ports:
+  - name: web
+    port: 9047
+    targetPort: 9047
+  - name: client
+    port: 31010
+    targetPort: 31010
+  - name: flight
+    port: 32010
+    targetPort: 32010
+---
+# Service for web UI
+apiVersion: v1
+kind: Service
+metadata:
+  name: dremio-client
+  namespace: dremio
+spec:
+  type: ClusterIP
+  selector:
+    app: dremio
+  ports:
+  - name: web
+    port: 9047
+    targetPort: 9047
+  - name: flight
+    port: 32010
+    targetPort: 32010
+---
+# Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dremio
+  namespace: dremio
