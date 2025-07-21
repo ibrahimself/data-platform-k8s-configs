@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: airflow
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: data-platform
+  sources:
+    # Source 1: Git repo for values file
+    - repoURL: git@github.com:ibrahimself/data-platform-k8s-configs.git
+      targetRevision: HEAD
+      ref: values
+    # Source 2: Helm chart from Apache Airflow
+    - repoURL: https://airflow.apache.org
+      chart: airflow
+      targetRevision: 1.16.0  # For Airflow 2.10.5
+      helm:
+        releaseName: airflow
+        valueFiles:
+          - $values/values/airflow-values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: airflow
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+  # Sync wave to ensure namespace and secrets exist first
+  info:
+    - name: 'sync-wave'
+      value: '10'

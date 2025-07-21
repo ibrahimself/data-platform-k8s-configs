@@ -1,0 +1,13 @@
+# PersistentVolumeClaim for PostgreSQL backups
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgresql-backup
+  namespace: postgresql
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gp2  # Update based on your storage class
+  resources:
+    requests:
+      storage: 20Gi

@@ -1,0 +1,59 @@
+# CronJob for automated PostgreSQL backups
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgresql-backup
+  namespace: postgresql
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: backup
+            image: bitnami/postgresql:16.3.0-debian-12-r0
+            env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql
+                  key: postgres-password
+            command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              DATE=$(date +%Y%m%d-%H%M%S)
+              BACKUP_DIR="/backup"
+              
+              echo "Starting backup at $DATE"
+              
+              # Backup all databases
+              pg_dumpall -h postgresql -U postgres -f "$BACKUP_DIR/all-databases-$DATE.sql"
+              
+              # Individual database backups
+              for db in dataplatform airflow dremio_metadata superset mlflow; do
+                echo "Backing up database: $db"
+                pg_dump -h postgresql -U postgres -d $db -f "$BACKUP_DIR/$db-$DATE.sql"
+              done
+              
+              # Compress backups
+              cd $BACKUP_DIR
+              tar -czf "postgres-backup-$DATE.tar.gz" *.sql
+              rm *.sql
+              
+              # Remove backups older than 7 days
+              find $BACKUP_DIR -name "postgres-backup-*.tar.gz" -mtime +7 -delete
+              
+              echo "Backup completed successfully"
+            volumeMounts:
+            - name: backup
+              mountPath: /backup
+          volumes:
+          - name: backup
+            persistentVolumeClaim:
+              claimName: postgresql-backup

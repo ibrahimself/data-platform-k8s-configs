@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: dremio
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: data-platform
+  sources:
+    # Source 1: Git repo for values file
+    - repoURL: git@github.com:ibrahimself/data-platform-k8s-configs.git
+      targetRevision: HEAD
+      ref: values
+    # Source 2: Helm chart from Dremio
+    - repoURL: https://charts.dremio.com
+      chart: dremio
+      targetRevision: 3.0.1  # Helm chart version for Dremio 26.0.1
+      helm:
+        releaseName: dremio
+        valueFiles:
+          - $values/values/dremio-values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: dremio
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+  # Sync wave - deploy after PostgreSQL
+  info:
+    - name: 'sync-wave'
+      value: '15'

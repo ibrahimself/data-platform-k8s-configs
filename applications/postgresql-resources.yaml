@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: postgresql-resources
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: data-platform
+  source:
+    repoURL: git@github.com:ibrahimself/data-platform-k8s-configs.git
+    targetRevision: HEAD
+    path: resources/postgresql
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: postgresql
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+  # Sync wave to create namespace first
+  info:
+    - name: 'sync-wave'
+      value: '1'

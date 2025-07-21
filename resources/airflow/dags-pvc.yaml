@@ -1,0 +1,13 @@
+# PersistentVolumeClaim for DAGs storage
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: airflow-dags
+  namespace: airflow
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: gp2  # Update based on your storage class
+  resources:
+    requests:
+      storage: 10Gi

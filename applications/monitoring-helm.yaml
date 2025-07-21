@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: prometheus-stack
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: data-platform
+  sources:
+    # Source 1: Git repo for values file
+    - repoURL: git@github.com:ibrahimself/data-platform-k8s-configs.git
+      targetRevision: HEAD
+      ref: values
+    # Source 2: Helm chart from Prometheus Community
+    - repoURL: https://prometheus-community.github.io/helm-charts
+      chart: kube-prometheus-stack
+      targetRevision: 56.6.2
+      helm:
+        releaseName: prometheus-stack
+        valueFiles:
+          - $values/values/monitoring-values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+  # Sync wave to ensure namespace exists first
+  info:
+    - name: 'sync-wave'
+      value: '10'

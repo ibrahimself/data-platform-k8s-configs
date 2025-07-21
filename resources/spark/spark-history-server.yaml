@@ -1,4 +1,4 @@
-# argocd-apps/spark/spark-history-pvc.yaml
+# Spark History Server components
 ---
 # PVC for Spark History Server event logs
 apiVersion: v1
@@ -22,6 +22,7 @@ metadata:
   namespace: spark
   labels:
     app: spark-history-server
+    component: history-server
 spec:
   replicas: 1
   selector:
@@ -31,6 +32,7 @@ spec:
     metadata:
       labels:
         app: spark-history-server
+        component: history-server
     spec:
       serviceAccountName: spark
       containers:
@@ -45,6 +47,8 @@ spec:
           value: "-Dspark.history.fs.logDirectory=/tmp/spark-events -Dspark.history.ui.port=18080"
         - name: SPARK_NO_DAEMONIZE
           value: "true"
+        - name: SPARK_PUBLIC_DNS
+          value: "localhost"  # For proper URL generation
         ports:
         - containerPort: 18080
           name: web
@@ -59,6 +63,9 @@ spec:
         volumeMounts:
         - name: spark-events
           mountPath: /tmp/spark-events
+        - name: spark-defaults
+          mountPath: /opt/spark/conf/spark-defaults.conf
+          subPath: spark-defaults.conf
         livenessProbe:
           httpGet:
             path: /
@@ -75,6 +82,9 @@ spec:
       - name: spark-events
         persistentVolumeClaim:
           claimName: spark-history-pvc
+      - name: spark-defaults
+        configMap:
+          name: spark-defaults
 ---
 # Service for History Server
 apiVersion: v1
@@ -84,6 +94,7 @@ metadata:
   namespace: spark
   labels:
     app: spark-history-server
+    component: history-server
 spec:
   type: ClusterIP
   ports:
@@ -108,5 +119,5 @@ spec:
       app: spark-history-server
   endpoints:
   - port: web
-    path: /metrics
+    path: /metrics/prometheus
     interval: 30s

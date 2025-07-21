@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: postgresql
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: data-platform
+  sources:
+    # Source 1: Git repo for values file
+    - repoURL: git@github.com:ibrahimself/data-platform-k8s-configs.git
+      targetRevision: HEAD
+      ref: values
+    # Source 2: Helm chart from Bitnami
+    - repoURL: https://charts.bitnami.com/bitnami
+      chart: postgresql
+      targetRevision: 15.5.38
+      helm:
+        releaseName: postgresql
+        valueFiles:
+          - $values/values/postgresql-values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: postgresql
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+  # Sync wave to ensure it deploys early (before services that depend on it)
+  info:
+    - name: 'sync-wave'
+      value: '2'

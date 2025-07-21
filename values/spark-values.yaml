@@ -1,0 +1,140 @@
+# Spark Operator Configuration for Data Platform
+
+# Spark operator image
+image:
+  repository: gcr.io/spark-operator/spark-operator
+  tag: v1beta2-1.3.8-3.1.1
+  pullPolicy: IfNotPresent
+
+# Spark job namespace (where Spark applications will run)
+sparkJobNamespace: spark
+
+# Enable webhook for validation
+webhook:
+  enable: true
+  port: 8080
+  namespaceSelector: |
+    matchLabels:
+      spark-webhook: enabled
+
+# Resource quotas and limits
+resourceQuotaEnforcement:
+  enable: false
+
+# Controller settings
+controllerThreads: 10
+resyncInterval: 30
+
+# Enable batch scheduler (for advanced scheduling)
+batchScheduler:
+  enable: false
+  # Options: volcano, yunikorn
+  # schedulerName: volcano
+
+# Metrics configuration
+metrics:
+  enable: true
+  port: 10254
+  endpoint: /metrics
+  prefix: ""
+
+# Service Accounts
+serviceAccounts:
+  spark:
+    create: true
+    name: spark
+  sparkoperator:
+    create: true
+    name: spark-operator
+
+# RBAC
+rbac:
+  create: true
+  createRole: true
+  createClusterRole: true
+
+# Resources for the operator pod
+resources:
+  requests:
+    cpu: 100m
+    memory: 300Mi
+  limits:
+    cpu: 200m
+    memory: 500Mi
+
+# Node selector for operator pod
+nodeSelector: {}
+  # node-group: system
+
+# Pod security context
+securityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+# Spark application defaults
+sparkApplicationDefaults:
+  sparkVersion: "3.5.3"
+  sparkImage: "apache/spark:3.5.3"
+  imagePullPolicy: "IfNotPresent"
+  restartPolicy:
+    type: OnFailure
+    onFailureRetries: 3
+    onFailureRetryInterval: 10
+    onSubmissionFailureRetries: 5
+    onSubmissionFailureRetryInterval: 20
+
+# Enable monitoring
+prometheus:
+  metrics:
+    enable: true
+    port: 10254
+    endpoint: /metrics
+  serviceMonitor:
+    enable: true
+    labels:
+      prometheus: kube-prometheus-stack
+    interval: 30s
+
+# Log level
+logLevel: info
+
+# Leader election (for HA)
+leaderElection:
+  enable: true
+  lockName: spark-operator-lock
+  lockNamespace: spark
+
+# Ingress class to add to Spark UI services
+ingressUrlFormat: ""
+
+# Environment variables for the operator
+env: []
+
+# Volume mounts for the operator
+volumeMounts: []
+
+# Volumes for the operator
+volumes: []
+
+# Affinity settings for the operator
+affinity: {}
+
+# Tolerations for the operator
+tolerations: []
+
+# Priority class for the operator
+priorityClassName: ""
+
+# Pod annotations
+podAnnotations: {}
+
+# Pod labels
+podLabels: {}
+
+# Enable CRD creation (should be true for initial install)
+createCRD: true
+
+# Time to live for Spark UI service
+uiService:
+  enable: true

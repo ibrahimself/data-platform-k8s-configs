@@ -1,14 +1,18 @@
-# argocd-apps/monitoring/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: monitoring
+namespace: spark
 
-# Just deploy your local resources
 resources:
   - namespace.yaml
+  - spark-history-server.yaml  # Renamed from spark-history-pvc.yaml
   - ingress.yaml
-  - helm-application.yaml  # New file that defines the Helm deployment
+
+# Create ConfigMap for Spark defaults
+configMapGenerator:
+  - name: spark-defaults
+    files:
+      - spark-defaults.conf
 
 # Common labels
 commonLabels:

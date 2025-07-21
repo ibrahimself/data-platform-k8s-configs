@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: spark-operator
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: data-platform
+  sources:
+    # Source 1: Git repo for values file
+    - repoURL: git@github.com:ibrahimself/data-platform-k8s-configs.git
+      targetRevision: HEAD
+      ref: values
+    # Source 2: Helm chart from Kubeflow
+    - repoURL: https://kubeflow.github.io/spark-operator
+      chart: spark-operator
+      targetRevision: 1.1.27  # Latest version for Spark 3.5.x support
+      helm:
+        releaseName: spark-operator
+        valueFiles:
+          - $values/values/spark-values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: spark
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+  # Sync wave - deploy after other base services
+  info:
+    - name: 'sync-wave'
+      value: '20'
