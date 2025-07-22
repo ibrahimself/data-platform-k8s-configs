@@ -31,19 +31,19 @@ prometheus:
     retention: 7d  # Reduced retention
     resources:
       requests:
-        cpu: 250m
-        memory: 512Mi
+        cpu: 500m       
+        memory: 1Gi   
       limits:
-        cpu: 500m
-        memory: 1Gi
+        cpu: 1000m
+        memory: 2Gi
     storageSpec:
       volumeClaimTemplate:
         spec:
-          storageClassName: gp2
+          storageClassName: gp3
           accessModes: ["ReadWriteOnce"]
           resources:
             requests:
-              storage: 20Gi  # Reduced storage
+              storage: 50Gi
 
 # Grafana - minimal resources
 grafana:
