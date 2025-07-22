@@ -13,7 +13,7 @@ spec:
     path: charts/dremio-helm
     helm:
       valueFiles:
-        - /home/ec2-user/data-platform-k8s/data-platform-k8s-configs/values/dremio-values.yaml
+        - ../../values/dremio-values.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: dremio
@@ -26,8 +26,7 @@ spec:
     - CreateNamespace=true
     - PrunePropagationPolicy=foreground
     - PruneLast=true
-    - Replace=true
-    - ServerSideApply=true
+    # Remove Replace=true for Jobs
     - RespectIgnoreDifferences=true
     retry:
       limit: 5
@@ -40,5 +39,4 @@ spec:
     kind: Job
     name: dremio-cluster-id
     jsonPointers:
-    - /spec/selector
-    - /spec/template/metadata/labels
+    - /spec
