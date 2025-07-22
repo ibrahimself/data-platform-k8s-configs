@@ -8,12 +8,20 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: git@github.com:ibrahimself/data-platform-k8s-configs.git
-    targetRevision: HEAD
-    path: charts/dremio-helm
+    repoURL: quay.io
+    chart: dremio/dremio-helm
+    targetRevision: 3.0.1  # Specify the version you want, or use latest
     helm:
       valueFiles:
-        - ../../values/dremio-values.yaml
+        - https://raw.githubusercontent.com/ibrahimself/data-platform-k8s-configs/HEAD/values/dremio-values.yaml
+      # Optional: Override specific values
+      parameters:
+      - name: image
+        value: quay.io/dremio/dremio-ee
+      - name: imageTag
+        value: "26.0.1"  # Use your desired version
+      - name: imagePullSecrets[0]
+        value: dremio-quay-secret
   destination:
     server: https://kubernetes.default.svc
     namespace: dremio
