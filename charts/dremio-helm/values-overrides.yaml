@@ -42,7 +42,7 @@ catalogServiceServer:
     repository: quay.io/dremio/catalog-service-server
   resources:
     requests:
-      cpu: "500m"      # NOT 4!
+      cpu: "500m"  
       memory: "2Gi"
     limits:
       cpu: "500m"
@@ -59,7 +59,7 @@ catalog:
     repository: quay.io/dremio/catalog-server
   resources:
     requests:
-      cpu: "500m"      # NOT 4!
+      cpu: "500m" 
       memory: "2Gi"
     limits:
       cpu: "500m"
