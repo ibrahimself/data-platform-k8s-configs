@@ -1,0 +1,71 @@
+{{- if .Values.coordinator.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dremio-cluster-id
+  labels:
+    app: {{ template "dremio.name" . }}
+    chart: {{ template "dremio.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+data:
+  cluster_id: "pending"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dremio-cluster-id-script
+  labels:
+    app: {{ template "dremio.name" . }}
+    chart: {{ template "dremio.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+data:
+  get-cluster-id.sh: |
+    #!/bin/sh
+    set -e
+    
+    echo "Checking if cluster ID already exists..."
+    existing_id=$(kubectl get configmap dremio-cluster-id -o jsonpath='{.data.cluster_id}' 2>/dev/null || echo "")
+    
+    if [ "$existing_id" != "" ] && [ "$existing_id" != "pending" ]; then
+      echo "Cluster ID already exists: $existing_id"
+      exit 0
+    fi
+    
+    echo "Waiting for Dremio coordinator to be ready..."
+    max_attempts=180
+    attempt=0
+    
+    while [ $attempt -lt $max_attempts ]; do
+      if curl -s -f http://{{ template "dremio.name" . }}-client:9047/apiv2/server_status 2>/dev/null; then
+        echo "Dremio is ready!"
+        break
+      fi
+      attempt=$((attempt + 1))
+      echo "Attempt $attempt/$max_attempts: Waiting for Dremio..."
+      sleep 5
+    done
+    
+    if [ $attempt -eq $max_attempts ]; then
+      echo "ERROR: Dremio did not become ready in time"
+      exit 1
+    fi
+    
+    # Get cluster ID
+    echo "Fetching cluster ID..."
+    cluster_id=$(curl -s http://{{ template "dremio.name" . }}-client:9047/api/v3/cluster/id | jq -r .id)
+    
+    if [ -z "$cluster_id" ] || [ "$cluster_id" = "null" ]; then
+      echo "ERROR: Failed to get cluster ID"
+      exit 1
+    fi
+    
+    echo "Got cluster ID: $cluster_id"
+    
+    # Update ConfigMap
+    kubectl patch configmap dremio-cluster-id \
+      --patch "{\"data\":{\"cluster_id\":\"$cluster_id\"}}"
+    
+    echo "Successfully updated cluster ID ConfigMap"
+{{- end }}

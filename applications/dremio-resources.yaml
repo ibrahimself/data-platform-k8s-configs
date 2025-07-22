@@ -6,9 +6,9 @@ metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
   annotations:
-    argocd.argoproj.io/sync-wave: "-5"  # Deploy before Helm chart
+    argocd.argoproj.io/sync-wave: "-5"
 spec:
-  project: data-platform
+  project: default
   source:
     repoURL: git@github.com:ibrahimself/data-platform-k8s-configs.git
     targetRevision: HEAD
@@ -22,3 +22,4 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - ServerSideApply=true
