@@ -1,4 +1,5 @@
-# Prometheus Stack Configuration for Data Platform - Enhanced Resources
+# monitoring-values-fixed.yaml
+# Prometheus Stack Configuration for Data Platform
 
 # Global settings
 global:
@@ -65,7 +66,7 @@ prometheus:
     podMonitorSelector: {}
     podMonitorNamespaceSelector: {}
 
-# Grafana - INCREASED RESOURCES
+# Grafana - FIXED CONFIGURATION
 grafana:
   enabled: true
   
@@ -76,14 +77,13 @@ grafana:
     type: ClusterIP
     port: 80
   
-  # SIGNIFICANTLY INCREASED RESOURCES
   resources:
     requests:
-      cpu: 500m      # Increased from 100m
-      memory: 1Gi    # Increased from 512Mi
+      cpu: 500m
+      memory: 1Gi
     limits:
-      cpu: 2000m     # Increased from 999m
-      memory: 4Gi    # Increased from 2Gi
+      cpu: 2000m
+      memory: 4Gi
   
   # Increase replicas for better availability
   replicas: 2
@@ -91,38 +91,21 @@ grafana:
   persistence:
     enabled: true
     storageClassName: gp2
-    size: 20Gi  # Increased from 10Gi
+    size: 20Gi
   
   # Pod disruption budget for high availability
   podDisruptionBudget:
     minAvailable: 1
   
-  # Liveness and readiness probes with increased timeouts
-  livenessProbe:
-    httpGet:
-      path: /api/health
-      port: 3000
-    initialDelaySeconds: 120
-    timeoutSeconds: 30
-    failureThreshold: 10
-  
-  readinessProbe:
-    httpGet:
-      path: /api/health
-      port: 3000
-    initialDelaySeconds: 60
-    timeoutSeconds: 30
-  
-  # Environment variables for performance tuning
+  # Environment variables - CORRECT FORMAT (key-value map, not array)
   env:
-    - name: GF_SERVER_ROUTER_LOGGING
-      value: "true"
-    - name: GF_DATABASE_WAL
-      value: "true"
-    - name: GF_DATABASE_CACHE_MODE
-      value: "shared"
-    - name: GF_ALERTING_CONCURRENT_RENDER_LIMIT
-      value: "10"
+    GF_SERVER_ROUTER_LOGGING: "true"
+    GF_DATABASE_WAL: "true"
+    GF_DATABASE_CACHE_MODE: "shared"
+    GF_ALERTING_CONCURRENT_RENDER_LIMIT: "10"
+  
+  # Additional environment variables via envFromSecret (if needed)
+  # envFromSecret: "grafana-env-secret"
   
   # Sidecar for dashboard/datasource discovery
   sidecar:
@@ -133,7 +116,6 @@ grafana:
       searchNamespace: ALL
       provider:
         foldersFromFilesStructure: true
-      # Resource limits for sidecar
       resources:
         requests:
           cpu: 100m
@@ -146,7 +128,6 @@ grafana:
       defaultDatasourceEnabled: true
       label: grafana_datasource
       labelValue: "1"
-      # Resource limits for sidecar
       resources:
         requests:
           cpu: 100m
@@ -155,13 +136,12 @@ grafana:
           cpu: 200m
           memory: 256Mi
   
-  # Grafana configuration for subpath
+  # Grafana configuration
   grafana.ini:
     server:
       domain: localhost
       root_url: "%(protocol)s://%(domain)s/grafana"
       serve_from_sub_path: true
-      # Performance settings
       enable_gzip: true
     security:
       admin_user: admin
@@ -173,14 +153,11 @@ grafana:
       enabled: false
     analytics:
       check_for_updates: false
-    # Database performance settings
     database:
       log_queries: false
       cache_mode: shared
-    # Caching settings
     caching:
       enabled: true
-    # Dataproxy settings for better performance
     dataproxy:
       timeout: 300
       keep_alive_seconds: 300
@@ -188,7 +165,6 @@ grafana:
       expect_continue_timeout_seconds: 30
       max_idle_connections: 200
       idle_conn_timeout_seconds: 300
-    # Rendering settings
     rendering:
       concurrent_render_request_limit: 10
 
