@@ -6,13 +6,12 @@ metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
-  project: data-platform
+  project: default
   source:
     repoURL: git@github.com:ibrahimself/data-platform-k8s-configs.git
     targetRevision: HEAD
     path: charts/dremio-helm
     helm:
-      releaseName: dremio-enterprise
       valueFiles:
         - ../../values/dremio-values.yaml
   destination:
@@ -24,16 +23,22 @@ spec:
       selfHeal: true
       allowEmpty: false
     syncOptions:
-      - CreateNamespace=false
-      - ServerSideApply=true
-      - Replace=true  # Add this to replace existing resources
-      - PrunePropagationPolicy=foreground
+    - CreateNamespace=true
+    - PrunePropagationPolicy=foreground
+    - PruneLast=true
+    - Replace=true
+    - ServerSideApply=true
+    - RespectIgnoreDifferences=true
     retry:
       limit: 5
       backoff:
         duration: 5s
         factor: 2
         maxDuration: 3m
-  info:
-    - name: 'sync-wave'
-      value: '25'
+  ignoreDifferences:
+  - group: batch
+    kind: Job
+    name: dremio-cluster-id
+    jsonPointers:
+    - /spec/selector
+    - /spec/template/metadata/labels
