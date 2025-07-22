@@ -1,12 +1,12 @@
-# monitoring-values-fixed.yaml
-# Prometheus Stack Configuration for Data Platform
+# monitoring-values-minimal.yaml
+# Minimal resource configuration to fit within quota
 
 # Global settings
 global:
   evaluation_interval: 30s
   scrape_interval: 30s
 
-# Prometheus Operator - with admission webhooks disabled
+# Prometheus Operator - minimal resources
 prometheusOperator:
   enabled: true
   admissionWebhooks:
@@ -15,24 +15,27 @@ prometheusOperator:
       enabled: false
   resources:
     requests:
-      cpu: 1000m      # Updated to meet minimum
-      memory: 2Gi     # Updated to meet minimum
+      cpu: 100m
+      memory: 128Mi
     limits:
-      cpu: 2000m
-      memory: 4Gi
+      cpu: 200m
+      memory: 256Mi
 
-# Prometheus
+# Prometheus - reduced resources
 prometheus:
   enabled: true
-  
   prometheusSpec:
-    # Enable path-based routing
+    replicas: 1  # Single replica
     externalUrl: /prometheus
     routePrefix: /prometheus
-    
-    # Storage
-    retention: 30d
-    retentionSize: "50GB"
+    retention: 7d  # Reduced retention
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
     storageSpec:
       volumeClaimTemplate:
         spec:
@@ -40,213 +43,96 @@ prometheus:
           accessModes: ["ReadWriteOnce"]
           resources:
             requests:
-              storage: 100Gi
-    
-    # UPDATED RESOURCES TO MEET LIMITRANGE
-    resources:
-      requests:
-        cpu: 1000m      # Changed to meet minimum
-        memory: 2Gi
-      limits:
-        cpu: 2000m
-        memory: 4Gi
-    
-    # External labels for federation/remote write
-    externalLabels:
-      cluster: "data-platform"
-      environment: "production"
-      region: "eu-west-3"
-    
-    # Service discovery - monitor everything
-    serviceMonitorSelectorNilUsesHelmValues: false
-    serviceMonitorSelector: {}
-    serviceMonitorNamespaceSelector: {}
-    
-    ruleSelectorNilUsesHelmValues: false
-    ruleSelector: {}
-    ruleNamespaceSelector: {}
-    
-    podMonitorSelectorNilUsesHelmValues: false
-    podMonitorSelector: {}
-    podMonitorNamespaceSelector: {}
+              storage: 20Gi  # Reduced storage
 
-# Grafana - FIXED CONFIGURATION
+# Grafana - minimal resources
 grafana:
   enabled: true
-  
-  # Admin credentials - CHANGE IN PRODUCTION!
   adminPassword: "changeme123!"
-  
-  service:
-    type: ClusterIP
-    port: 80
-  
-  # UPDATED RESOURCES TO MEET LIMITRANGE REQUIREMENTS
+  replicas: 1  # Single replica only
   resources:
     requests:
-      cpu: 1000m      # Changed from 500m to meet minimum
-      memory: 2Gi     # Changed from 1Gi to meet minimum
+      cpu: 100m
+      memory: 128Mi
     limits:
-      cpu: 2000m
-      memory: 4Gi
-  
-  # Increase replicas for better availability
-  replicas: 2
-  
+      cpu: 200m
+      memory: 256Mi
   persistence:
     enabled: true
     storageClassName: gp2
-    size: 20Gi
-  
-  # Pod disruption budget for high availability
-  podDisruptionBudget:
-    minAvailable: 1
-  
-  # Environment variables - CORRECT FORMAT (key-value map, not array)
-  env:
-    GF_SERVER_ROUTER_LOGGING: "true"
-    GF_DATABASE_WAL: "true"
-    GF_DATABASE_CACHE_MODE: "shared"
-    GF_ALERTING_CONCURRENT_RENDER_LIMIT: "10"
-  
-  # Additional environment variables via envFromSecret (if needed)
-  # envFromSecret: "grafana-env-secret"
-  
-  # Sidecar for dashboard/datasource discovery
+    size: 5Gi
   sidecar:
     dashboards:
       enabled: true
-      label: grafana_dashboard
-      labelValue: "1"
-      searchNamespace: ALL
-      provider:
-        foldersFromFilesStructure: true
       resources:
         requests:
-          cpu: 1000m      # Updated to meet minimum
-          memory: 2Gi     # Updated to meet minimum
+          cpu: 50m
+          memory: 64Mi
         limits:
-          cpu: 2000m
-          memory: 4Gi
+          cpu: 100m
+          memory: 128Mi
     datasources:
       enabled: true
-      defaultDatasourceEnabled: true
-      label: grafana_datasource
-      labelValue: "1"
       resources:
         requests:
-          cpu: 1000m      # Updated to meet minimum
-          memory: 2Gi     # Updated to meet minimum
+          cpu: 50m
+          memory: 64Mi
         limits:
-          cpu: 2000m
-          memory: 4Gi
-  
-  # Grafana configuration
+          cpu: 100m
+          memory: 128Mi
   grafana.ini:
     server:
       domain: localhost
       root_url: "%(protocol)s://%(domain)s/grafana"
       serve_from_sub_path: true
-      enable_gzip: true
-    security:
-      admin_user: admin
-    users:
-      allow_sign_up: false
-      auto_assign_org: true
-      auto_assign_org_role: Viewer
-    auth.anonymous:
-      enabled: false
-    analytics:
-      check_for_updates: false
-    database:
-      log_queries: false
-      cache_mode: shared
-    caching:
-      enabled: true
-    dataproxy:
-      timeout: 300
-      keep_alive_seconds: 300
-      tls_handshake_timeout_seconds: 30
-      expect_continue_timeout_seconds: 30
-      max_idle_connections: 200
-      idle_conn_timeout_seconds: 300
-    rendering:
-      concurrent_render_request_limit: 10
 
-# AlertManager
+# AlertManager - minimal resources
 alertmanager:
   enabled: true
-  
   alertmanagerSpec:
-    # Enable path-based routing
+    replicas: 1  # Single replica
     externalUrl: /alertmanager
     routePrefix: /alertmanager
-    
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
     storage:
       volumeClaimTemplate:
         spec:
           storageClassName: gp2
-          accessModes: ["ReadWriteOnce"]
           resources:
             requests:
-              storage: 10Gi
-    
-    # UPDATED RESOURCES TO MEET LIMITRANGE
-    resources:
-      requests:
-        cpu: 1000m      # Changed to meet minimum
-        memory: 2Gi     # Changed to meet minimum
-      limits:
-        cpu: 2000m
-        memory: 4Gi
-    
-    retention: 720h
-  
-  # Basic AlertManager config
-  config:
-    global:
-      resolve_timeout: 5m
-    route:
-      group_by: ['alertname', 'cluster', 'service']
-      group_wait: 10s
-      group_interval: 10s
-      repeat_interval: 1h
-      receiver: 'default-receiver'
-      routes:
-      - match:
-          severity: critical
-        receiver: 'critical-receiver'
-    receivers:
-    - name: 'default-receiver'
-      # Add webhook_configs, email_configs, etc.
-    - name: 'critical-receiver'
-      # Add critical notification config
+              storage: 5Gi
 
-# Node Exporter
+# Node Exporter - minimal
 nodeExporter:
   enabled: true
   resources:
     requests:
-      cpu: 1000m      # Updated to meet minimum
-      memory: 2Gi     # Updated to meet minimum
+      cpu: 50m
+      memory: 32Mi
     limits:
-      cpu: 2000m
-      memory: 4Gi
+      cpu: 100m
+      memory: 64Mi
 
-# Kube State Metrics
+# Kube State Metrics - minimal
 kubeStateMetrics:
   enabled: true
   resources:
     requests:
-      cpu: 1000m      # Updated to meet minimum
-      memory: 2Gi     # Updated to meet minimum
+      cpu: 50m
+      memory: 64Mi
     limits:
-      cpu: 2000m
-      memory: 4Gi
+      cpu: 100m
+      memory: 128Mi
 
-# Enable monitoring for all Kubernetes components
+# Disable non-essential components
 kubeApiServer:
-  enabled: true
+  enabled: false
 kubeControllerManager:
   enabled: false
 kubeEtcd:
@@ -254,52 +140,28 @@ kubeEtcd:
 kubeScheduler:
   enabled: false
 kubeProxy:
-  enabled: true
+  enabled: false
 kubelet:
-  enabled: true
+  enabled: false
 coreDns:
-  enabled: true
+  enabled: false
 
-# Prometheus Node Exporter
-prometheus-node-exporter:
-  hostRootFsMount:
-    enabled: false
-
-# Default Prometheus Rules
+# Minimal rules
 defaultRules:
   create: true
   rules:
     alertmanager: true
-    etcd: false
-    configReloaders: true
     general: true
     k8s: true
-    kubeApiserverAvailability: true
-    kubeApiserverBurnrate: true
-    kubeApiserverHistogram: true
-    kubeApiserverSlos: true
-    kubelet: true
-    kubeProxy: true
-    kubePrometheusGeneral: true
-    kubePrometheusNodeRecording: true
     kubernetesApps: true
     kubernetesResources: true
-    kubernetesStorage: true
-    kubernetesSystem: true
-    kubeScheduler: false
-    kubeStateMetrics: true
-    network: true
-    node: true
-    nodeExporterAlerting: true
-    nodeExporterRecording: true
     prometheus: true
     prometheusOperator: true
-
-# Disable admission webhooks if they cause issues
-prometheusOperator:
-  admissionWebhooks:
-    enabled: false
-    
-# Additional scrape configs (optional)
-additionalPrometheusRulesMap: {}
-additionalServiceMonitors: []
+    # Disable others to save resources
+    etcd: false
+    kubeApiserverAvailability: false
+    kubeApiserverBurnrate: false
+    kubeApiserverHistogram: false
+    kubeApiserverSlos: false
+    network: false
+    node: false
