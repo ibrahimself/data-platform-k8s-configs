@@ -16,10 +16,21 @@ spec:
         - values.yaml
   destination:
     server: https://kubernetes.default.svc
-    namespace: default
+    namespace: dremio
   syncPolicy:
     automated:
       prune: true
-      selfHeal: true
-    syncOptions:
-      - CreateNamespace=true
+      selfHeal: false  # Disable self-heal
+  ignoreDifferences:
+  - group: apps
+    kind: Deployment
+    name: dremio-mongodb-operator
+  - group: apps
+    kind: Deployment
+    name: dremio-catalog-server
+  - group: apps
+    kind: Deployment
+    name: dremio-catalog-services-server
+  - group: apps
+    kind: Deployment  
+    name: engine-operator
