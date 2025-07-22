@@ -50,16 +50,7 @@ catalogServiceServer:
 
 # EXPLICITLY override catalog external access
 catalogExternalAccessServer:
-  enabled: true
-  image:
-    repository: quay.io/dremio/catalog-external-access-server
-  resources:
-    requests:
-      cpu: "500m"      # NOT 4!
-      memory: "2Gi"
-    limits:
-      cpu: "500m"
-      memory: "2Gi"
+  enabled: false
 
 # EXPLICITLY override catalog
 catalog:
@@ -76,16 +67,7 @@ catalog:
 
 # MongoDB with explicit limits
 mongodb:
-  enabled: true
-  resources:
-    requests:
-      cpu: "500m"
-      memory: "2Gi"
-    limits:
-      cpu: "500m"
-      memory: "2Gi"
-  volumeSize: "100Gi"
-  replicas: 1
+  enabled: false
 
 # Zookeeper with explicit limits
 zookeeper:
