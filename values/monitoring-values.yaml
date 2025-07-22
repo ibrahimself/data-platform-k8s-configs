@@ -15,11 +15,11 @@ prometheusOperator:
       enabled: false
   resources:
     requests:
-      cpu: 200m
-      memory: 256Mi
+      cpu: 1000m      # Updated to meet minimum
+      memory: 2Gi     # Updated to meet minimum
     limits:
-      cpu: 1000m
-      memory: 1Gi
+      cpu: 2000m
+      memory: 4Gi
 
 # Prometheus
 prometheus:
@@ -42,10 +42,10 @@ prometheus:
             requests:
               storage: 100Gi
     
-    # Resources
+    # UPDATED RESOURCES TO MEET LIMITRANGE
     resources:
       requests:
-        cpu: 500m
+        cpu: 1000m      # Changed to meet minimum
         memory: 2Gi
       limits:
         cpu: 2000m
@@ -81,10 +81,11 @@ grafana:
     type: ClusterIP
     port: 80
   
+  # UPDATED RESOURCES TO MEET LIMITRANGE REQUIREMENTS
   resources:
     requests:
-      cpu: 500m
-      memory: 1Gi
+      cpu: 1000m      # Changed from 500m to meet minimum
+      memory: 2Gi     # Changed from 1Gi to meet minimum
     limits:
       cpu: 2000m
       memory: 4Gi
@@ -122,11 +123,11 @@ grafana:
         foldersFromFilesStructure: true
       resources:
         requests:
-          cpu: 100m
-          memory: 128Mi
+          cpu: 1000m      # Updated to meet minimum
+          memory: 2Gi     # Updated to meet minimum
         limits:
-          cpu: 200m
-          memory: 256Mi
+          cpu: 2000m
+          memory: 4Gi
     datasources:
       enabled: true
       defaultDatasourceEnabled: true
@@ -134,11 +135,11 @@ grafana:
       labelValue: "1"
       resources:
         requests:
-          cpu: 100m
-          memory: 128Mi
+          cpu: 1000m      # Updated to meet minimum
+          memory: 2Gi     # Updated to meet minimum
         limits:
-          cpu: 200m
-          memory: 256Mi
+          cpu: 2000m
+          memory: 4Gi
   
   # Grafana configuration
   grafana.ini:
@@ -190,13 +191,14 @@ alertmanager:
             requests:
               storage: 10Gi
     
+    # UPDATED RESOURCES TO MEET LIMITRANGE
     resources:
       requests:
-        cpu: 100m
-        memory: 128Mi
+        cpu: 1000m      # Changed to meet minimum
+        memory: 2Gi     # Changed to meet minimum
       limits:
-        cpu: 500m
-        memory: 256Mi
+        cpu: 2000m
+        memory: 4Gi
     
     retention: 720h
   
@@ -225,22 +227,22 @@ nodeExporter:
   enabled: true
   resources:
     requests:
-      cpu: 50m
-      memory: 64Mi
+      cpu: 1000m      # Updated to meet minimum
+      memory: 2Gi     # Updated to meet minimum
     limits:
-      cpu: 200m
-      memory: 128Mi
+      cpu: 2000m
+      memory: 4Gi
 
 # Kube State Metrics
 kubeStateMetrics:
   enabled: true
   resources:
     requests:
-      cpu: 100m
-      memory: 128Mi
+      cpu: 1000m      # Updated to meet minimum
+      memory: 2Gi     # Updated to meet minimum
     limits:
-      cpu: 200m
-      memory: 256Mi
+      cpu: 2000m
+      memory: 4Gi
 
 # Enable monitoring for all Kubernetes components
 kubeApiServer:
