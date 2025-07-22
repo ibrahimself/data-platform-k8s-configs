@@ -1,104 +1,213 @@
-# Explicit overrides for resource-constrained environment
-# This file explicitly sets ALL resource values to prevent defaults
+# Dremio Enterprise Values - Adapted for Namespace Constraints
+# Based on reference configuration with resource limits adjusted
 
-# License
+# License Configuration
 dremio:
   license: "eyJraWQiOiI4MGZhMjgxYzZhZjczNDNkNTE1YTVhMzg1MDg1N2RhNmE2YmEzMTU3NWE5ZjVlZmVhMmQ4MTkyMGUyM2Q2OGY0IiwiYWxnIjoiRVMyNTYifQ.eyJpc3MiOiJEcmVtaW8iLCJzdWIiOiIwMDM1ZDAwMDA3TFRkT0VBQTEiLCJuYmYiOjE3NTI3ODA0NzYsImV4cCI6MTc1NTU0NTI3NiwiaWF0IjoxNzUyNzgwNDc2LCJqdGkiOiIxNzUyNzgwNDc2MDYyVzJjciJ9.u8bxfpQvyieeGn3H8RNIyKqbIgHR4pYO0mfBDBh23WJJw58t2WsDEhbOL6rUdfyGu4hItUtcohCoSEXMaAAolg"
+  
   image:
     repository: quay.io/dremio/dremio-enterprise
+    pullPolicy: Always
 
+# Image Pull Secrets
 imagePullSecrets:
   - name: dremio-pull-secret
 
-# EXPLICITLY override engine operator resources
-engineOperator:
-  enabled: true
-  image:
-    repository: quay.io/dremio/dremio-engine-operator
-  resources:
-    requests:
-      cpu: "250m"      # Reduced to be safe
-      memory: "512Mi"  # Matching the apparent limit
-    limits:
-      cpu: "250m"
-      memory: "512Mi"
-
-# EXPLICITLY override coordinator
-coordinator:
-  resources:
-    requests:
-      cpu: "500m"
-      memory: "4Gi"
-    limits:
-      cpu: "500m"
-      memory: "4Gi"
-  volumeSize: "100Gi"
-  count: 0
-
-# EXPLICITLY override catalog services
-catalogServiceServer:
-  enabled: true
-  image:
-    repository: quay.io/dremio/catalog-service-server
-  resources:
-    requests:
-      cpu: "500m"  
-      memory: "2Gi"
-    limits:
-      cpu: "500m"
-      memory: "2Gi"
-
-# EXPLICITLY override catalog external access
-catalogExternalAccessServer:
-  enabled: false
-
-# EXPLICITLY override catalog
-catalog:
-  enabled: true
-  image:
-    repository: quay.io/dremio/catalog-server
-  resources:
-    requests:
-      cpu: "500m" 
-      memory: "2Gi"
-    limits:
-      cpu: "500m"
-      memory: "2Gi"
-
-# MongoDB with explicit limits
-mongodb:
-  enabled: false
-
-# Zookeeper with explicit limits
-zookeeper:
-  enabled: true
-  resources:
-    requests:
-      cpu: "250m"
-      memory: "512Mi"
-    limits:
-      cpu: "250m"
-      memory: "512Mi"
-  volumeSize: "10Gi"
-  count: 1
-
-# NATS with explicit limits
-nats:
-  enabled: true
-  resources:
-    requests:
-      cpu: "250m"
-      memory: "512Mi"
-    limits:
-      cpu: "250m"
-      memory: "512Mi"
-
-# Service config
+# Service Configuration
 service:
   type: ClusterIP
   sessionAffinity: "ClientIP"
 
-# Storage config
+# MongoDB Configuration (adjusted for constraints)
+mongodb:
+  enabled: true
+  resources:
+    requests:
+      cpu: "500m"      # Reduced from 1 to fit constraint
+      memory: "4Gi"
+    limits:
+      cpu: "500m"      # Must match request
+      memory: "4Gi"
+  volumeSize: "15Gi"   # As per reference config
+  replicas: 1
+
+# Zookeeper Configuration
+zookeeper:
+  enabled: true
+  resources:
+    requests:
+      cpu: "500m"      # Reduced to fit constraint
+      memory: "1Gi"
+    limits:
+      cpu: "500m"
+      memory: "1Gi"
+  volumeSize: "10Gi"
+  count: 1
+
+# NATS Configuration  
+nats:
+  enabled: true
+  resources:
+    requests:
+      cpu: "500m"      # Reduced from 1 to fit constraint
+      memory: "4Gi"
+    limits:
+      cpu: "500m"
+      memory: "4Gi"
+
+# Coordinator Configuration
+coordinator:
+  resources:
+    requests:
+      cpu: "500m"      # Reduced from 1 to fit constraint
+      memory: "4Gi"
+    limits:
+      cpu: "500m"
+      memory: "4Gi"
+  volumeSize: "15Gi"   # As per reference config
+  count: 0
+  
+  web:
+    auth:
+      enabled: true
+      type: "internal"
+    tls:
+      enabled: false
+  
+  client:
+    tls:
+      enabled: false
+  
+  flight:
+    tls:
+      enabled: false
+
+# Catalog Configuration
+catalog:
+  enabled: true
+  resources:
+    requests:
+      cpu: "500m"      # Reduced from 1 to fit constraint
+      memory: "4Gi"
+    limits:
+      cpu: "500m"
+      memory: "4Gi"
+  
+  externalAccess:
+    enabled: true
+  
+  storage:
+    type: "S3"
+    location: "s3://dremio-catalog/catalog"
+    s3:
+      endpoint: "http://minio.minio.svc.cluster.local:9000"
+      region: "us-east-1"
+      pathStyleAccess: true
+      useAccessKeys: true
+    extraProperties: |
+      <property>
+        <n>fs.s3a.endpoint</n>
+        <value>http://minio.minio.svc.cluster.local:9000</value>
+      </property>
+      <property>
+        <n>fs.s3a.path.style.access</n>
+        <value>true</value>
+      </property>
+
+# Catalog External Access Server
+catalogExternalAccessServer:
+  enabled: true
+  resources:
+    requests:
+      cpu: "500m"      # Reduced from 4 to fit constraint
+      memory: "4Gi"
+    limits:
+      cpu: "500m"
+      memory: "4Gi"
+
+# Catalog Service Server
+catalogServiceServer:
+  enabled: true
+  resources:
+    requests:
+      cpu: "500m"      # Reduced from 4 to fit constraint
+      memory: "4Gi"
+    limits:
+      cpu: "500m"
+      memory: "4Gi"
+
+# Engine Configuration
+engine:
+  options:
+    sizes:
+      - name: 2XSmall
+        cpuScaleFactor: 0.5
+        pods: 1
+        memory: 4Gi
+      - name: XSmall
+        pods: 1
+        memory: 8Gi
+      - name: Small
+        pods: 2
+        memory: 8Gi
+      - name: Medium
+        pods: 2
+        memory: 16Gi
+    targetCpuCapacities:
+      capacities:
+        - name: 2C
+          cpu: 2
+        - name: 4C
+          cpu: 4
+      defaultCapacity: 2C
+    resourceAllocationOffsets:
+      defaultOffset: reserve-0-0
+    storage:
+      spillStorageSizes:
+        - name: 10GB
+          storage: 10Gi
+      defaultSpillStorageSize: 10GB
+      c3StorageSizes:
+        - name: 10GB
+          storage: 10Gi
+      defaultC3StorageSize: 10GB
+
+# Engine Operator Configuration (FIXED typo from reference)
+engineOperator:
+  enabled: true
+  resources:
+    requests:
+      cpu: "500m"      # Reduced from 1 to fit constraint
+      memory: "4Gi"    # Fixed typo (was 41Gi in reference)
+    limits:
+      cpu: "500m"
+      memory: "4Gi"
+
+# Executor Configuration
+executor:
+  enabled: false      # Disabled as per reference
+  resources:
+    requests:
+      cpu: "500m"     # Reduced from 1 to fit constraint
+      memory: "4Gi"
+    limits:
+      cpu: "500m"
+      memory: "4Gi"
+  volumeSize: "15Gi"
+
+# OpenSearch Configuration
+opensearch:
+  enabled: false     # Disabled as per reference
+
+# Telemetry Configuration
+telemetry:
+  enabled: false     # Disabled as per reference
+
+# Ingress Configuration
+ingress:
+  enabled: false     # Using custom ingress
+
+# Distributed Storage Configuration - MinIO
 distStorage:
   type: "aws"
   aws:
@@ -117,35 +226,25 @@ distStorage:
         <n>fs.s3a.path.style.access</n>
         <value>true</value>
       </property>
-
-# Catalog storage
-catalog:
-  storage:
-    type: "S3"
-    location: "s3://dremio-catalog/catalog"
-    s3:
-      region: "us-east-1"
-      useAccessKeys: true
-    extraProperties: |
       <property>
-        <n>fs.s3a.endpoint</n>
-        <value>http://minio.minio.svc.cluster.local:9000</value>
-      </property>
-      <property>
-        <n>fs.s3a.path.style.access</n>
+        <n>dremio.s3.compat</n>
         <value>true</value>
       </property>
 
-# Disable non-essential components
-opensearch:
-  enabled: false
-
-telemetry:
-  enabled: false
-
-ingress:
-  enabled: false
-
-# Ensure labels
+# Labels
 commonLabels:
   app: dremio
+  app.kubernetes.io/part-of: data-platform
+  
+labels:
+  app: dremio
+
+# Note: Removed tolerations and nodeSelector as they're specific to the reference environment
+# Add them back if you have a dedicated "dremio" node pool:
+# tolerations:
+#   - key: "dremio"
+#     operator: "Equal"
+#     value: "run"
+#     effect: "NoSchedule"
+# nodeSelector:
+#   dremio: "run"
