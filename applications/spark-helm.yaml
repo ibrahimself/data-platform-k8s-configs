@@ -13,7 +13,6 @@ spec:
     targetRevision: 1.1.27
     helm:
       releaseName: spark-operator
-      # Skip CRDs if they already exist
       skipCrds: false
       values: |
         # Use correct image
