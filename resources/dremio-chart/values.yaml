@@ -15,33 +15,13 @@ imagePullSecrets:
 # Coordinator - Minimal
 # In your dremio-values.yaml, add:
 coordinator:
-  initContainers:
-  - name: cluster-id-setup
-    image: quay.io/dremio/alpine/k8s:1.32.2
-    command: ["sh", "-c"]
-    args:
-    - |
-      set -e
-      # Check if configmap exists and has cluster_id
-      if kubectl get configmap dremio-cluster-id -o jsonpath='{.data.cluster_id}' 2>/dev/null | grep -q .; then
-        echo "Cluster ID already exists"
-      else
-        cluster_id=$(curl -k --retry-connrefused --retry 90 --retry-delay 10 --retry-max-time 900 \
-          http://dremio-client:9047/api/v3/cluster/id | jq -r .id)
-        echo "cluster_id=${cluster_id}"
-        kubectl create configmap dremio-cluster-id --from-literal=cluster_id="${cluster_id}" \
-          --dry-run=client -o yaml | kubectl apply -f -
-      fi
   resources:
     requests:
-      cpu: "500m"
-      memory: "4Gi"
+      cpu: "2"        # Minimum for testing
+      memory: "8Gi"   # Minimum recommended
     limits:
-      cpu: "500m"
-      memory: "4Gi"
-  volumeSize: "10Gi"
-  count: 0
-  
+      cpu: "2"
+      memory: "8Gi"
   web:
     auth:
       enabled: true
@@ -108,8 +88,19 @@ catalogServiceServer:
 engineOperator:
   enabled: false
 
+# Add executor configuration
 executor:
-  enabled: false
+  enabled: true
+  resources:
+    requests:
+      cpu: "2"
+      memory: "8Gi"
+    limits:
+      cpu: "2"
+      memory: "8Gi"
+  count: 1
+  volumeSize: 20Gi
+  engines: ["default"]
 
 opensearch:
   enabled: false
