@@ -10,7 +10,7 @@ dremio:
 
 # Image Pull Secret
 imagePullSecrets:
-  - name: dremio-pull-secret
+  - i-bouabdallaoui-dataplatform-pull-secret
 
 # Coordinator - Minimal
 # In your dremio-values.yaml, add:
