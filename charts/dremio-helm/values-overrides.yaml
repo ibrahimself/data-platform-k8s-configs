@@ -20,16 +20,7 @@ service:
 
 # MongoDB Configuration (adjusted for constraints)
 mongodb:
-  enabled: true
-  resources:
-    requests:
-      cpu: "500m"      # Reduced from 1 to fit constraint
-      memory: "4Gi"
-    limits:
-      cpu: "500m"      # Must match request
-      memory: "4Gi"
-  volumeSize: "15Gi"   # As per reference config
-  replicas: 1
+  enabled: false
 
 # Zookeeper Configuration
 zookeeper:
@@ -84,17 +75,10 @@ coordinator:
 
 # Catalog Configuration
 catalog:
-  enabled: true
-  resources:
-    requests:
-      cpu: "500m"      # Reduced from 1 to fit constraint
-      memory: "4Gi"
-    limits:
-      cpu: "500m"
-      memory: "4Gi"
+  enabled: false
   
   externalAccess:
-    enabled: true
+    enabled: false
   
   storage:
     type: "S3"
@@ -174,14 +158,7 @@ engine:
 
 # Engine Operator Configuration (FIXED typo from reference)
 engineOperator:
-  enabled: true
-  resources:
-    requests:
-      cpu: "500m"      # Reduced from 1 to fit constraint
-      memory: "4Gi"    # Fixed typo (was 41Gi in reference)
-    limits:
-      cpu: "500m"
-      memory: "4Gi"
+  enabled: false
 
 # Executor Configuration
 executor:
