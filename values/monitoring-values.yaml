@@ -6,9 +6,13 @@ global:
   evaluation_interval: 30s
   scrape_interval: 30s
 
-# Prometheus Operator
+# Prometheus Operator - with admission webhooks disabled
 prometheusOperator:
   enabled: true
+  admissionWebhooks:
+    enabled: false
+    patch:
+      enabled: false
   resources:
     requests:
       cpu: 200m
@@ -289,6 +293,11 @@ defaultRules:
     prometheus: true
     prometheusOperator: true
 
+# Disable admission webhooks if they cause issues
+prometheusOperator:
+  admissionWebhooks:
+    enabled: false
+    
 # Additional scrape configs (optional)
 additionalPrometheusRulesMap: {}
 additionalServiceMonitors: []
