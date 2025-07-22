@@ -30,6 +30,13 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+      - Replace=true  # Add this to replace existing resources
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
   # Sync wave to ensure namespace exists first
   info:
     - name: 'sync-wave'
