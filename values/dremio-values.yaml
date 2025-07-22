@@ -22,9 +22,7 @@ coordinator:
       memory: 64Gi
     limits:
       memory: 64Gi
-  
-  # Storage
-  volumeSize: 512Gi
+  volumeSize: 100Gi
   
   # Scale-out coordinators (0 = only primary)
   count: 0
@@ -102,7 +100,7 @@ catalog:
 # Service Configuration
 service:
   type: LoadBalancer  # or ClusterIP if using Ingress
-  sessionAffinity: true  # Important for scale-out coordinators
+  sessionAffinity: "ClientIP"  # Important for scale-out coordinators
   # For AWS EKS in Auto Mode
   # annotations:
   #   service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
@@ -130,7 +128,7 @@ mongodb:
     requests:
       memory: 4Gi
       cpu: 8
-  volumeSize: 512Gi
+  volumeSize: 100Gi
   replicas: 3
 
 zookeeper:
@@ -158,10 +156,16 @@ catalogExternalAccessServer:
     requests:
       memory: 8Gi
       cpu: 4
+    limits:
+      memory: 8Gi
+      cpu: 4
 
 catalogServiceServer:
   resources:
     requests:
+      memory: 8Gi
+      cpu: 4
+    limits:
       memory: 8Gi
       cpu: 4
 
@@ -179,7 +183,7 @@ engine:
 
 # Telemetry
 telemetry:
-  enabled: true
+  enabled: false
 
 # Global metadata (optional)
 labels: {}
