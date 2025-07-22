@@ -7,7 +7,7 @@ dremio:
     tag: 26.0.0
 
 imagePullSecrets:
-  - i-bouabdallaoui-dataplatform-pull-secret
+  - dremio-quay-secret
 
 # Coordinator
 coordinator:
