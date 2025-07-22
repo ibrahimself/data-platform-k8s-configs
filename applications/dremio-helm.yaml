@@ -13,7 +13,7 @@ spec:
     path: charts/dremio-helm
     helm:
       valueFiles:
-        - ../../values/dremio-values.yaml
+        - /home/ec2-user/data-platform-k8s/data-platform-k8s-configs/values/dremio-values.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: dremio
