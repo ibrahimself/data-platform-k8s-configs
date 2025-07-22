@@ -1,5 +1,5 @@
-# Dremio Enterprise Values - Following Official Structure
-# Based on Dremio 26.x documentation
+# Dremio Enterprise Values - Resource Constrained Environment
+# Adjusted for namespace limits: 500m CPU max, 100Gi storage max
 
 # License Configuration (Required)
 dremio:
@@ -11,27 +11,26 @@ dremio:
 
 # Image Pull Secrets
 imagePullSecrets:
-  - dremio-pull-secret
+  - name: dremio-pull-secret
 
-# Coordinator Configuration
+# Coordinator Configuration - CONSTRAINED
 coordinator:
-  # Production resources
   resources:
     requests:
-      cpu: 32
-      memory: 64Gi
+      cpu: "500m"      # Maximum allowed
+      memory: "8Gi"
     limits:
-      memory: 64Gi
-  volumeSize: 100Gi
+      cpu: "500m"      # Must match request
+      memory: "8Gi"
   
-  # Scale-out coordinators (0 = only primary)
-  count: 0
+  volumeSize: "100Gi"  # Maximum allowed
+  count: 0             # Only primary coordinator
   
   # Web UI Configuration
   web:
     auth:
       enabled: true
-      type: "internal"  # Change to azuread, ldap, oauth as needed
+      type: "internal"
     tls:
       enabled: false
   
@@ -45,11 +44,18 @@ coordinator:
     tls:
       enabled: false
 
-# Distributed Storage Configuration (REQUIRED)
-# Choose one of: aws, azureStorage, or gcp
-# Distributed Storage Configuration - Using MinIO
+# Service Configuration
+service:
+  type: ClusterIP      # Use ingress instead of LoadBalancer
+  sessionAffinity: "ClientIP"
+
+# Ingress - Using your existing ingress
+ingress:
+  enabled: false       # Disabled because you have custom ingress
+
+# Distributed Storage - MinIO
 distStorage:
-  type: "aws"  # MinIO is S3-compatible
+  type: "aws"
   aws:
     bucketName: "dremio-dist-storage"
     path: "/"
@@ -57,7 +63,6 @@ distStorage:
     credentials:
       accessKey: "minioadmin"
       secret: "minioadmin123"
-    # Extra properties for MinIO
     extraProperties: |
       <property>
         <name>fs.s3a.endpoint</name>
@@ -72,7 +77,7 @@ distStorage:
         <value>true</value>
       </property>
 
-# Enterprise Catalog Configuration - Using MinIO
+# Enterprise Catalog - MinIO
 catalog:
   externalAccess:
     enabled: true
@@ -82,11 +87,9 @@ catalog:
     location: "s3://dremio-catalog/catalog"
     
     s3:
-      region: "us-east-1"  # Default region for MinIO
-      # For MinIO, we'll use access keys instead of IAM roles
+      region: "us-east-1"
       useAccessKeys: true
       
-    # Additional MinIO configuration
     extraProperties: |
       <property>
         <name>fs.s3a.endpoint</name>
@@ -97,96 +100,104 @@ catalog:
         <value>true</value>
       </property>
 
-# Service Configuration
-service:
-  type: LoadBalancer  # or ClusterIP if using Ingress
-  sessionAffinity: "ClientIP"  # Important for scale-out coordinators
-  # For AWS EKS in Auto Mode
-  # annotations:
-  #   service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
-
-# Ingress Configuration (Optional)
-ingress:
-  enabled: true
-  className: nginx
-  hosts:
-    - host: dremio.yourdomain.com  # CHANGE THIS
-      paths:
-        - /
-  tls:
-    - secretName: dremio-tls
-      hosts:
-        - dremio.yourdomain.com
-
-# Production Resources Configuration
+# OpenSearch - Disabled
 opensearch:
   enabled: false
   replicas: 0
 
+# MongoDB - CONSTRAINED
 mongodb:
   resources:
     requests:
-      memory: 4Gi
-      cpu: 8
-  volumeSize: 100Gi
-  replicas: 3
+      cpu: "500m"      # Reduced from 8
+      memory: "4Gi"    
+    limits:
+      cpu: "500m"
+      memory: "4Gi"
+  volumeSize: "100Gi"  # Maximum allowed
+  replicas: 1          # Minimal for testing
 
+# Zookeeper - CONSTRAINED
 zookeeper:
   resources:
     requests:
-      memory: 1Gi
-      cpu: 500m
-  volumeSize: 10Gi
-  count: 3
+      cpu: "500m"      # Already compliant
+      memory: "1Gi"
+    limits:
+      cpu: "500m"
+      memory: "1Gi"
+  volumeSize: "10Gi"
+  count: 1             # Minimal for testing
 
+# NATS - CONSTRAINED
 nats:
   resources:
     requests:
-      memory: 1Gi
-      cpu: 700m
+      cpu: "500m"      # Reduced from 700m
+      memory: "1Gi"
+    limits:
+      cpu: "500m"
+      memory: "1Gi"
 
+# Catalog Service - CONSTRAINED
 catalog:
   resources:
     requests:
-      memory: 8Gi
-      cpu: 4
+      cpu: "500m"      # Reduced from 4
+      memory: "4Gi"    # Reduced from 8Gi
+    limits:
+      cpu: "500m"
+      memory: "4Gi"
 
+# Catalog External Access - CONSTRAINED
 catalogExternalAccessServer:
   resources:
     requests:
-      memory: 8Gi
-      cpu: 4
+      cpu: "500m"      # Reduced from 4
+      memory: "4Gi"    # Reduced from 8Gi
     limits:
-      memory: 8Gi
-      cpu: 4
+      cpu: "500m"      # Must be explicit
+      memory: "4Gi"
 
+# Catalog Service Server - CONSTRAINED
 catalogServiceServer:
   resources:
     requests:
-      memory: 8Gi
-      cpu: 4
+      cpu: "500m"      # Reduced from 4
+      memory: "4Gi"    # Reduced from 8Gi
     limits:
-      memory: 8Gi
-      cpu: 4
+      cpu: "500m"      # Must be explicit
+      memory: "4Gi"
 
+# Engine Operator - CONSTRAINED
 engineOperator:
   resources:
     requests:
-      memory: 1Gi
-      cpu: 1
+      cpu: "500m"      # Reduced from 1
+      memory: "1Gi"
+    limits:
+      cpu: "500m"
+      memory: "1Gi"
 
-# Engine Configuration (New Engines)
+# Engine Configuration
 engine:
   options:
     resourceAllocationOffsets:
       defaultOffset: reserve-2-8
 
-# Telemetry
+# Telemetry - Disabled initially
 telemetry:
   enabled: false
 
-# Global metadata (optional)
-labels: {}
+# Labels for proper resource management
+commonLabels:
+  app: dremio
+  app.kubernetes.io/part-of: data-platform
+  
+labels:
+  app: dremio
+
+# Global metadata
 annotations: {}
 tolerations: []
 nodeSelector: {}
