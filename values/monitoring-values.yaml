@@ -1,4 +1,4 @@
-# Prometheus Stack Configuration for Data Platform
+# Prometheus Stack Configuration for Data Platform - Enhanced Resources
 
 # Global settings
 global:
@@ -10,14 +10,11 @@ prometheusOperator:
   enabled: true
   resources:
     requests:
-      cpu: 100m
-      memory: 128Mi
+      cpu: 200m
+      memory: 256Mi
     limits:
-      cpu: 500m
-      memory: 512Mi
-  # Remove node selector if you don't have node-group labels
-  # nodeSelector:
-  #   node-group: system
+      cpu: 1000m
+      memory: 1Gi
 
 # Prometheus
 prometheus:
@@ -34,7 +31,7 @@ prometheus:
     storageSpec:
       volumeClaimTemplate:
         spec:
-          storageClassName: gp2  # Update based on your storage class
+          storageClassName: gp2
           accessModes: ["ReadWriteOnce"]
           resources:
             requests:
@@ -68,7 +65,7 @@ prometheus:
     podMonitorSelector: {}
     podMonitorNamespaceSelector: {}
 
-# Grafana
+# Grafana - INCREASED RESOURCES
 grafana:
   enabled: true
   
@@ -79,18 +76,53 @@ grafana:
     type: ClusterIP
     port: 80
   
+  # SIGNIFICANTLY INCREASED RESOURCES
   resources:
     requests:
-      cpu: 100m
-      memory: 512Mi
+      cpu: 500m      # Increased from 100m
+      memory: 1Gi    # Increased from 512Mi
     limits:
-      cpu: 999m
-      memory: 2Gi
+      cpu: 2000m     # Increased from 999m
+      memory: 4Gi    # Increased from 2Gi
+  
+  # Increase replicas for better availability
+  replicas: 2
   
   persistence:
     enabled: true
     storageClassName: gp2
-    size: 10Gi
+    size: 20Gi  # Increased from 10Gi
+  
+  # Pod disruption budget for high availability
+  podDisruptionBudget:
+    minAvailable: 1
+  
+  # Liveness and readiness probes with increased timeouts
+  livenessProbe:
+    httpGet:
+      path: /api/health
+      port: 3000
+    initialDelaySeconds: 120
+    timeoutSeconds: 30
+    failureThreshold: 10
+  
+  readinessProbe:
+    httpGet:
+      path: /api/health
+      port: 3000
+    initialDelaySeconds: 60
+    timeoutSeconds: 30
+  
+  # Environment variables for performance tuning
+  env:
+    - name: GF_SERVER_ROUTER_LOGGING
+      value: "true"
+    - name: GF_DATABASE_WAL
+      value: "true"
+    - name: GF_DATABASE_CACHE_MODE
+      value: "shared"
+    - name: GF_ALERTING_CONCURRENT_RENDER_LIMIT
+      value: "10"
   
   # Sidecar for dashboard/datasource discovery
   sidecar:
@@ -101,18 +133,36 @@ grafana:
       searchNamespace: ALL
       provider:
         foldersFromFilesStructure: true
+      # Resource limits for sidecar
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          cpu: 200m
+          memory: 256Mi
     datasources:
       enabled: true
       defaultDatasourceEnabled: true
       label: grafana_datasource
       labelValue: "1"
+      # Resource limits for sidecar
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          cpu: 200m
+          memory: 256Mi
   
   # Grafana configuration for subpath
   grafana.ini:
     server:
-      domain: localhost  # Update with your domain
+      domain: localhost
       root_url: "%(protocol)s://%(domain)s/grafana"
       serve_from_sub_path: true
+      # Performance settings
+      enable_gzip: true
     security:
       admin_user: admin
     users:
@@ -123,6 +173,24 @@ grafana:
       enabled: false
     analytics:
       check_for_updates: false
+    # Database performance settings
+    database:
+      log_queries: false
+      cache_mode: shared
+    # Caching settings
+    caching:
+      enabled: true
+    # Dataproxy settings for better performance
+    dataproxy:
+      timeout: 300
+      keep_alive_seconds: 300
+      tls_handshake_timeout_seconds: 30
+      expect_continue_timeout_seconds: 30
+      max_idle_connections: 200
+      idle_conn_timeout_seconds: 300
+    # Rendering settings
+    rendering:
+      concurrent_render_request_limit: 10
 
 # AlertManager
 alertmanager:
@@ -186,16 +254,23 @@ nodeExporter:
 # Kube State Metrics
 kubeStateMetrics:
   enabled: true
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
 
 # Enable monitoring for all Kubernetes components
 kubeApiServer:
   enabled: true
 kubeControllerManager:
-  enabled: false  # Usually not accessible in managed k8s
+  enabled: false
 kubeEtcd:
-  enabled: false  # Usually not accessible in managed k8s
+  enabled: false
 kubeScheduler:
-  enabled: false  # Usually not accessible in managed k8s
+  enabled: false
 kubeProxy:
   enabled: true
 kubelet:
@@ -206,14 +281,14 @@ coreDns:
 # Prometheus Node Exporter
 prometheus-node-exporter:
   hostRootFsMount:
-    enabled: false  # Set to true if you need host filesystem metrics
+    enabled: false
 
 # Default Prometheus Rules
 defaultRules:
   create: true
   rules:
     alertmanager: true
-    etcd: false  # Disable if using managed k8s
+    etcd: false
     configReloaders: true
     general: true
     k8s: true
@@ -229,7 +304,7 @@ defaultRules:
     kubernetesResources: true
     kubernetesStorage: true
     kubernetesSystem: true
-    kubeScheduler: false  # Disable if using managed k8s
+    kubeScheduler: false
     kubeStateMetrics: true
     network: true
     node: true
