@@ -1,0 +1,117 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: spark-operator-alerts
+  namespace: spark
+  labels:
+    prometheus: kube-prometheus
+    role: alert-rules
+spec:
+  groups:
+  - name: spark-operator.rules
+    interval: 30s
+    rules:
+    # Alert if Spark Operator is down
+    - alert: SparkOperatorDown
+      expr: up{job="spark-operator-metrics"} == 0
+      for: 5m
+      labels:
+        severity: critical
+        component: spark
+      annotations:
+        summary: "Spark Operator is down"
+        description: "Spark Operator in namespace {{ $labels.namespace }} has been down for more than 5 minutes."
+        
+    # Alert if too many Spark apps are failing
+    - alert: HighSparkApplicationFailureRate
+      expr: |
+        (
+          increase(spark_app_failure_count[1h]) / 
+          (increase(spark_app_submit_count[1h]) > 0)
+        ) > 0.25
+      for: 15m
+      labels:
+        severity: warning
+        component: spark
+      annotations:
+        summary: "High Spark application failure rate"
+        description: "More than 25% of Spark applications have failed in the last hour. Failure rate: {{ $value | humanizePercentage }}"
+        
+    # Alert if Spark app submission latency is high
+    - alert: HighSparkAppStartLatency
+      expr: |
+        histogram_quantile(0.95, 
+          sum(rate(spark_app_start_latency_microseconds_bucket[5m])) by (le)
+        ) > 300000000  # 300 seconds in microseconds
+      for: 10m
+      labels:
+        severity: warning
+        component: spark
+      annotations:
+        summary: "High Spark application start latency"
+        description: "95th percentile Spark application start latency is above 5 minutes: {{ $value | humanizeDuration }}"
+        
+    # Alert if too many apps are stuck in SUBMITTED state
+    - alert: SparkAppsStuckInSubmitted
+      expr: spark_app_count{app_state="SUBMITTED"} > 10
+      for: 10m
+      labels:
+        severity: warning
+        component: spark
+      annotations:
+        summary: "Too many Spark apps stuck in SUBMITTED state"
+        description: "{{ $value }} Spark applications have been in SUBMITTED state for more than 10 minutes"
+        
+    # Alert if Spark Operator pod is restarting frequently
+    - alert: SparkOperatorRestartingFrequently
+      expr: |
+        increase(kube_pod_container_status_restarts_total{
+          namespace="spark",
+          pod=~"spark-operator-.*"
+        }[1h]) > 5
+      for: 5m
+      labels:
+        severity: warning
+        component: spark
+      annotations:
+        summary: "Spark Operator pod restarting frequently"
+        description: "Spark Operator pod {{ $labels.pod }} has restarted {{ $value }} times in the last hour"
+        
+    # Alert if no successful Spark apps in a while (could indicate issues)
+    - alert: NoSuccessfulSparkApps
+      expr: increase(spark_app_success_count[1h]) == 0 and increase(spark_app_submit_count[1h]) > 0
+      for: 1h
+      labels:
+        severity: warning
+        component: spark
+      annotations:
+        summary: "No successful Spark applications"
+        description: "No Spark applications have completed successfully in the last hour despite submissions"
+        
+  - name: spark-resources.rules
+    interval: 30s
+    rules:
+    # Alert if Spark jobs are consuming too much cluster resources
+    - alert: SparkHighMemoryUsage
+      expr: |
+        sum(container_memory_usage_bytes{pod=~".*-driver|.*-exec-.*", namespace="spark"}) 
+        / 
+        sum(kube_node_status_allocatable{resource="memory"}) > 0.7
+      for: 15m
+      labels:
+        severity: warning
+        component: spark
+      annotations:
+        summary: "Spark jobs consuming high cluster memory"
+        description: "Spark jobs are using {{ $value | humanizePercentage }} of total cluster memory"
+        
+    # Alert if too many executor pods
+    - alert: TooManySparkExecutors
+      expr: count(kube_pod_info{pod=~".*-exec-.*", namespace="spark"}) > 100
+      for: 5m
+      labels:
+        severity: warning
+        component: spark
+      annotations:
+        summary: "Too many Spark executor pods"
+        description: "There are {{ $value }} Spark executor pods running, which may impact cluster stability"

@@ -6,16 +6,15 @@ namespace: spark
 resources:
   - namespace.yaml
   - spark-history-server.yaml
-  - spark-operator-servicemonitor.yaml
   - ingress.yaml
+  - spark-operator-servicemonitor.yaml 
+  - spark-operator-metrics-service.yaml
 
-# Create ConfigMap for Spark defaults
 configMapGenerator:
   - name: spark-defaults
     files:
       - spark-defaults.conf
 
-# Common labels
 commonLabels:
   app.kubernetes.io/part-of: data-platform
   app.kubernetes.io/managed-by: argocd

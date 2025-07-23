@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: spark-alertmanager-config
+  namespace: monitoring
+data:
+  spark-alerts.yaml: |
+    route:
+      group_by: ['alertname', 'cluster', 'service']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 12h
+      receiver: 'default'
+      routes:
+      - match:
+          component: spark
+        receiver: spark-alerts
+        routes:
+        - match:
+            severity: critical
+          receiver: spark-critical
+          
+    receivers:
+    - name: 'spark-alerts'
+      # Configure your notification method here
+      # Example: Slack
+      slack_configs:
+      - api_url: 'YOUR_SLACK_WEBHOOK_URL'
+        channel: '#spark-alerts'
+        title: 'Spark Alert'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}\n{{ .Annotations.description }}\n{{ end }}'
+        
+    - name: 'spark-critical'
+      # For critical alerts, maybe page someone
+      pagerduty_configs:
+      - service_key: 'YOUR_PAGERDUTY_SERVICE_KEY'
+        description: '{{ .GroupLabels.alertname }}'
+        
+      # Also send to Slack
+      slack_configs:
+      - api_url: 'YOUR_SLACK_WEBHOOK_URL'
+        channel: '#spark-critical'
+        title: '🚨 CRITICAL: Spark Alert'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}\n{{ .Annotations.description }}\n{{ end }}'
