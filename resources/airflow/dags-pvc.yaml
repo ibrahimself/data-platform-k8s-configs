@@ -6,8 +6,8 @@ metadata:
   namespace: airflow
 spec:
   accessModes:
-    - ReadWriteMany
-  storageClassName: gp2  # Update based on your storage class
+    - ReadWriteOnce
+  storageClassName: gp2
   resources:
     requests:
       storage: 10Gi

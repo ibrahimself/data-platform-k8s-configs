@@ -1,0 +1,129 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: airflow-alerts
+  namespace: airflow
+  labels:
+    prometheus: kube-prometheus
+    role: alert-rules
+spec:
+  groups:
+  - name: airflow.rules
+    interval: 30s
+    rules:
+    # Alert if Airflow scheduler is down
+    - alert: AirflowSchedulerDown
+      expr: up{job="airflow-scheduler"} == 0 or absent(airflow_scheduler_heartbeat)
+      for: 5m
+      labels:
+        severity: critical
+        component: airflow
+      annotations:
+        summary: "Airflow Scheduler is down"
+        description: "Airflow Scheduler has been down for more than 5 minutes."
+        
+    # Alert if Airflow webserver is down
+    - alert: AirflowWebserverDown
+      expr: up{job="airflow-webserver"} == 0
+      for: 5m
+      labels:
+        severity: critical
+        component: airflow
+      annotations:
+        summary: "Airflow Webserver is down"
+        description: "Airflow Webserver has been down for more than 5 minutes."
+        
+    # Alert if DAG processing is slow
+    - alert: AirflowSlowDAGProcessing
+      expr: airflow_dag_processing_last_runtime > 30
+      for: 10m
+      labels:
+        severity: warning
+        component: airflow
+      annotations:
+        summary: "Slow DAG processing"
+        description: "DAG processing is taking more than 30 seconds for DAG {{ $labels.dag_id }}"
+        
+    # Alert if too many task failures
+    - alert: AirflowHighTaskFailureRate
+      expr: |
+        (
+          rate(airflow_task_instance_finished{status="failed"}[1h]) /
+          rate(airflow_task_instance_finished[1h])
+        ) > 0.1
+      for: 15m
+      labels:
+        severity: warning
+        component: airflow
+      annotations:
+        summary: "High task failure rate"
+        description: "More than 10% of tasks are failing. Current failure rate: {{ $value | humanizePercentage }}"
+        
+    # Alert if executor has no open slots
+    - alert: AirflowExecutorNoOpenSlots
+      expr: airflow_executor_open_slots == 0
+      for: 10m
+      labels:
+        severity: warning
+        component: airflow
+      annotations:
+        summary: "Airflow executor has no open slots"
+        description: "Airflow executor has had no open slots for 10 minutes, tasks are queuing up"
+        
+    # Alert if too many queued tasks
+    - alert: AirflowTooManyQueuedTasks
+      expr: airflow_executor_queued_tasks > 100
+      for: 15m
+      labels:
+        severity: warning
+        component: airflow
+      annotations:
+        summary: "Too many queued tasks"
+        description: "{{ $value }} tasks have been queued for more than 15 minutes"
+        
+    # Alert if pool utilization is too high
+    - alert: AirflowPoolUtilizationHigh
+      expr: |
+        (airflow_pool_slots_used / airflow_pool_slots_total) > 0.9
+      for: 10m
+      labels:
+        severity: warning
+        component: airflow
+      annotations:
+        summary: "Airflow pool utilization is high"
+        description: "Pool {{ $labels.pool_name }} is {{ $value | humanizePercentage }} utilized"
+        
+    # Alert if database connection pool is exhausted
+    - alert: AirflowDatabaseConnectionPoolExhausted
+      expr: airflow_scheduler_tasks_killed_externally > 0
+      for: 5m
+      labels:
+        severity: warning
+        component: airflow
+      annotations:
+        summary: "Tasks being killed externally"
+        description: "{{ $value }} tasks have been killed externally, might indicate resource issues"
+        
+  - name: airflow-sla.rules
+    interval: 30s
+    rules:
+    # Alert on SLA misses
+    - alert: AirflowSLAMiss
+      expr: increase(airflow_sla_missed[1h]) > 0
+      labels:
+        severity: warning
+        component: airflow
+      annotations:
+        summary: "Airflow SLA missed"
+        description: "SLA missed for DAG {{ $labels.dag_id }}, task {{ $labels.task_id }}"
+        
+    # Alert if DAG run duration is too long
+    - alert: AirflowLongRunningDAG
+      expr: airflow_dag_run_duration > 3600  # 1 hour
+      for: 10m
+      labels:
+        severity: warning
+        component: airflow
+      annotations:
+        summary: "Long running DAG"
+        description: "DAG {{ $labels.dag_id }} has been running for more than 1 hour"

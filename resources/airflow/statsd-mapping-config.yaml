@@ -1,0 +1,91 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: airflow-statsd-mapping-config
+  namespace: airflow
+data:
+  statsd-mapping-config.yaml: |
+    mappings:
+    # Scheduler metrics
+    - match: "airflow.scheduler.*.*"
+      name: "airflow_scheduler_${1}_${2}"
+      labels:
+        job: "airflow"
+    
+    # Executor metrics
+    - match: "airflow.executor.*"
+      name: "airflow_executor_${1}"
+      labels:
+        job: "airflow"
+    
+    # Task metrics
+    - match: "airflow.task.*.*.duration"
+      name: "airflow_task_duration"
+      labels:
+        dag_id: "$1"
+        task_id: "$2"
+        job: "airflow"
+    
+    - match: "airflow.task.*.*.started"
+      name: "airflow_task_started"
+      labels:
+        dag_id: "$1"
+        task_id: "$2"
+        job: "airflow"
+    
+    - match: "airflow.task.*.*.ended"
+      name: "airflow_task_ended"
+      labels:
+        dag_id: "$1"
+        task_id: "$2"
+        job: "airflow"
+    
+    - match: "airflow.task_instance_finished_*"
+      name: "airflow_task_instance_finished"
+      labels:
+        status: "$1"
+        job: "airflow"
+    
+    # DAG metrics
+    - match: "airflow.dag.*.duration"
+      name: "airflow_dag_duration"
+      labels:
+        dag_id: "$1"
+        job: "airflow"
+    
+    - match: "airflow.dag_processing.*"
+      name: "airflow_dag_processing_${1}"
+      labels:
+        job: "airflow"
+    
+    - match: "airflow.dag.*.*.duration"
+      name: "airflow_dag_task_duration"
+      labels:
+        dag_id: "$1"
+        task_id: "$2"
+        job: "airflow"
+    
+    # Pool metrics
+    - match: "airflow.pool.*.slots_used"
+      name: "airflow_pool_slots_used"
+      labels:
+        pool_name: "$1"
+        job: "airflow"
+    
+    - match: "airflow.pool.*.slots_available"
+      name: "airflow_pool_slots_available"
+      labels:
+        pool_name: "$1"
+        job: "airflow"
+    
+    # SLA metrics
+    - match: "airflow.sla_missed"
+      name: "airflow_sla_missed"
+      labels:
+        job: "airflow"
+    
+    # Generic airflow metrics
+    - match: "airflow.*"
+      name: "airflow_${1}"
+      labels:
+        job: "airflow"

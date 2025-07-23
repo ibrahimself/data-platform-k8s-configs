@@ -1,0 +1,61 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: airflow-statsd
+  namespace: airflow
+  labels:
+    app: airflow
+    component: statsd
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      tier: airflow
+      component: statsd
+      release: airflow
+  endpoints:
+  - port: statsd-scrape
+    path: /metrics
+    interval: 30s
+---
+# ServiceMonitor for Airflow Webserver metrics
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: airflow-webserver
+  namespace: airflow
+  labels:
+    app: airflow
+    component: webserver
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      tier: airflow
+      component: webserver
+      release: airflow
+  endpoints:
+  - port: airflow-ui
+    path: /admin/metrics
+    interval: 30s
+---
+# ServiceMonitor for Airflow Scheduler metrics
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: airflow-scheduler
+  namespace: airflow
+  labels:
+    app: airflow
+    component: scheduler
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      tier: airflow
+      component: scheduler
+      release: airflow
+  endpoints:
+  - port: scheduler-logs
+    path: /metrics
+    interval: 30s

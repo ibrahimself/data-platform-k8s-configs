@@ -5,9 +5,12 @@ namespace: airflow
 
 resources:
   - namespace.yaml
-  - airflow-secrets.yaml  # Database connection secrets
-  - dags-pvc.yaml        # DAGs storage
+  - airflow-secrets.yaml           # Database connection secrets
+  - dags-pvc.yaml                  # DAGs storage
   - ingress.yaml
+  - airflow-servicemonitor.yaml    # Prometheus service monitors
+  - airflow-prometheus-rules.yaml  # Alert rules
+  - statsd-mapping-config.yaml     # StatsD to Prometheus mapping
 
 commonLabels:
   app.kubernetes.io/part-of: data-platform

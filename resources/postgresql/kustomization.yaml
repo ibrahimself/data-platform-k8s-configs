@@ -5,6 +5,7 @@ namespace: postgresql
 
 resources:
   - namespace.yaml
+  - postgresql-servicemonitor.yaml
   #- postgresql-backup-pvc.yaml  # for backups
   #- network-policy.yaml         # for network security
   #- backup-cronjob.yaml         # for scheduled backups

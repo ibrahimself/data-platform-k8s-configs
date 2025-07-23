@@ -28,6 +28,21 @@ env:
     value: "2.10.5"
   - name: AIRFLOW__WEBSERVER__BASE_URL
     value: "http://localhost:8080/airflow"
+  # Metrics configuration
+  - name: AIRFLOW__METRICS__STATSD_ON
+    value: "True"
+  - name: AIRFLOW__METRICS__STATSD_HOST
+    value: "airflow-statsd"
+  - name: AIRFLOW__METRICS__STATSD_PORT
+    value: "9125"
+  - name: AIRFLOW__METRICS__STATSD_PREFIX
+    value: "airflow"
+  - name: AIRFLOW__SCHEDULER__STATSD_ON
+    value: "True"
+  - name: AIRFLOW__SCHEDULER__STATSD_HOST
+    value: "airflow-statsd"
+  - name: AIRFLOW__SCHEDULER__STATSD_PORT
+    value: "9125"
 
 # Airflow configuration overrides
 config:
@@ -44,7 +59,7 @@ config:
   webserver:
     expose_config: "True"
     rbac: "True"
-    base_url: "http://localhost:8080/airflow"
+    # base_url configured via env variable above
   email:
     email_backend: airflow.utils.email.send_email_smtp
     smtp_host: localhost
@@ -76,7 +91,6 @@ webserver:
     ports:
       - name: airflow-ui
         port: 8080
-  baseUrl: "http://localhost:8080/airflow"
   # Default admin user
   defaultUser:
     enabled: true
@@ -86,8 +100,8 @@ webserver:
     firstName: Admin
     lastName: User
     password: admin
-  # Secret name for webserver secret key
-  webserverSecretKeySecretName: airflow-webserver-secret
+  # Secret configuration is handled differently
+  secretName: airflow-webserver-secret  # Reference to existing secret
 
 # Scheduler configuration
 scheduler:
@@ -113,6 +127,10 @@ workers:
     limits:
       cpu: 1000m
       memory: 2Gi
+  # Service account for workers
+  serviceAccount:
+    create: true
+    name: airflow-worker
 
 # Triggerer configuration
 triggerer:
@@ -139,32 +157,21 @@ dags:
   persistence:
     enabled: true
     size: 10Gi
-    storageClassName: gp2  # Update based on your storage class
-    accessMode: ReadWriteMany
+    storageClassName: gp2
+    accessMode: ReadWriteOnce
+    existingClaim: airflow-dags  # Use the PVC we create separately
   gitSync:
     enabled: false
-    # Enable if you want to sync DAGs from git
-    # repo: https://github.com/your-org/airflow-dags.git
-    # branch: main
-    # rev: HEAD
-    # depth: 1
-    # maxFailures: 0
-    # subPath: dags
-    # sshKeySecret: airflow-git-ssh-secret
-    # wait: 60
-    # containerName: git-sync
-    # uid: 65533
 
 # Logs configuration
 logs:
   persistence:
     enabled: true
     size: 20Gi
-    storageClassName: gp2  # Update based on your storage class
-    existingClaim: null
+    storageClassName: gp2
 
 # Fernet key configuration
-fernetKey: fk6Rc2F9PvDkGPKpbGq6ysKmluXCHzpMwJitx-JB8JU=  # CHANGE THIS IN PRODUCTION!
+fernetKey: null  # Don't set inline
 fernetKeySecretName: airflow-fernet-key
 
 # ServiceAccount
@@ -172,12 +179,6 @@ serviceAccount:
   create: true
   name: airflow
   annotations: {}
-
-# ServiceAccount for Airflow workers
-workers:
-  serviceAccount:
-    create: true
-    name: airflow-worker
 
 # RBAC
 rbac:
@@ -198,7 +199,6 @@ podSecurityContext:
 
 # Node selector
 nodeSelector: {}
-  # node-group: compute
 
 # Monitoring
 metrics:
@@ -207,7 +207,8 @@ metrics:
     enabled: true
     interval: 30s
     labels:
-      prometheus: kube-prometheus-stack
+      prometheus: kube-prometheus
+      release: prometheus-stack
 
 # StatsD for metrics
 statsd:
@@ -219,11 +220,22 @@ statsd:
     limits:
       cpu: 200m
       memory: 256Mi
+  # Configure statsd-exporter to convert statsd metrics to Prometheus format
+  extraArgs:
+    - --statsd.mapping-config=/tmp/statsd-mapping-config.yaml
+  extraVolumes:
+    - name: statsd-mapping-config
+      configMap:
+        name: airflow-statsd-mapping-config
+  extraVolumeMounts:
+    - name: statsd-mapping-config
+      mountPath: /tmp/statsd-mapping-config.yaml
+      subPath: statsd-mapping-config.yaml
 
 # Cleanup
 cleanup:
   enabled: true
-  schedule: "0 0 * * *"  # Daily at midnight
+  schedule: "0 0 * * *"
 
 # Extra pip packages to install
 extraPipPackages:
@@ -239,7 +251,6 @@ extraPipPackages:
 extraVolumeMounts:
   - name: dags
     mountPath: /opt/airflow/dags
-    readOnly: false
 
 extraVolumes:
   - name: dags

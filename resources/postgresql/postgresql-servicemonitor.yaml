@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: postgresql-metrics
+  namespace: postgresql
+  labels:
+    app: postgresql
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: metrics
+      app.kubernetes.io/instance: postgresql
+      app.kubernetes.io/name: postgresql
+  endpoints:
+  - port: http-metrics
+    path: /metrics
+    interval: 30s
