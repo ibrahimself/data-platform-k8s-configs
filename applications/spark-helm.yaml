@@ -18,9 +18,42 @@ spec:
       targetRevision: 1.1.27
       helm:
         releaseName: spark-operator
-        skipCrds: false
-        valueFiles:
-          - $values/values/spark-values.yaml  # Use your values file!
+        values: |
+          # Match exactly what worked in Helm
+          webhook:
+            enable: false
+          sparkJobNamespace: spark
+          serviceAccounts:
+            spark:
+              create: true
+              name: spark
+            sparkoperator:
+              create: true
+              name: spark-operator
+          rbac:
+            create: true
+            createRole: true
+            createClusterRole: true
+          controllerThreads: 10
+          resyncInterval: 30
+          batchScheduler:
+            enable: false
+          resources:
+            limits:
+              cpu: 200m
+              memory: 500Mi
+            requests:
+              cpu: 100m
+              memory: 300Mi
+          metrics:
+            enable: true
+            port: 10254
+            endpoint: /metrics
+          uiService:
+            enable: true
+          resourceQuotaEnforcement:
+            enable: false
+          logLevel: info
   destination:
     server: https://kubernetes.default.svc
     namespace: spark
@@ -30,8 +63,8 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
-      - ServerSideApply=true
-      - Replace=true
+      - ApplyOutOfSyncOnly=true  # Only apply changes
+      - SkipHooks=true           # Skip hooks
       - RespectIgnoreDifferences=true
     retry:
       limit: 5
@@ -43,13 +76,11 @@ spec:
     - group: "*"
       kind: "*"
       jsonPointers:
-        - /metadata/annotations/argocd.argoproj.io~1hook
-        - /metadata/annotations/argocd.argoproj.io~1hook-delete-policy
-    - group: "apiextensions.k8s.io"
-      kind: CustomResourceDefinition
-      jsonPointers:
-        - /spec/conversion/webhook/clientConfig/caBundle
-  revisionHistoryLimit: 3
-  info:
-    - name: 'sync-wave'
-      value: '20'
+        - /metadata/annotations
+        - /metadata/labels
+    - group: "rbac.authorization.k8s.io"
+      kind: ClusterRole
+      name: spark-operator
+    - group: "rbac.authorization.k8s.io"
+      kind: ClusterRoleBinding
+      name: spark-operator
