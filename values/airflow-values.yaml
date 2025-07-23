@@ -59,7 +59,6 @@ config:
   webserver:
     expose_config: "True"
     rbac: "True"
-    # base_url configured via env variable above
   email:
     email_backend: airflow.utils.email.send_email_smtp
     smtp_host: localhost
@@ -100,8 +99,8 @@ webserver:
     firstName: Admin
     lastName: User
     password: admin
-  # Secret configuration is handled differently
-  secretName: airflow-webserver-secret  # Reference to existing secret
+  # Use extraSecretEnv instead of secretName
+  extraSecretEnv: "airflow-webserver-secret"
 
 # Scheduler configuration
 scheduler:
@@ -159,7 +158,7 @@ dags:
     size: 10Gi
     storageClassName: gp2
     accessMode: ReadWriteOnce
-    existingClaim: airflow-dags  # Use the PVC we create separately
+    existingClaim: airflow-dags
   gitSync:
     enabled: false
 
@@ -171,7 +170,7 @@ logs:
     storageClassName: gp2
 
 # Fernet key configuration
-fernetKey: null  # Don't set inline
+fernetKey: null
 fernetKeySecretName: airflow-fernet-key
 
 # ServiceAccount
@@ -191,7 +190,7 @@ securityContext:
   runAsGroup: 0
   fsGroup: 0
 
-# Pod security context (legacy - for older chart versions)
+# Pod security context
 podSecurityContext:
   runAsUser: 50000
   runAsGroup: 0
@@ -210,7 +209,7 @@ metrics:
       prometheus: kube-prometheus
       release: prometheus-stack
 
-# StatsD for metrics
+# StatsD for metrics - simplified configuration
 statsd:
   enabled: true
   resources:
@@ -220,17 +219,6 @@ statsd:
     limits:
       cpu: 200m
       memory: 256Mi
-  # Configure statsd-exporter to convert statsd metrics to Prometheus format
-  extraArgs:
-    - --statsd.mapping-config=/tmp/statsd-mapping-config.yaml
-  extraVolumes:
-    - name: statsd-mapping-config
-      configMap:
-        name: airflow-statsd-mapping-config
-  extraVolumeMounts:
-    - name: statsd-mapping-config
-      mountPath: /tmp/statsd-mapping-config.yaml
-      subPath: statsd-mapping-config.yaml
 
 # Cleanup
 cleanup:
