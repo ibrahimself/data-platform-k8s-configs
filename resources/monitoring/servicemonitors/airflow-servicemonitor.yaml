@@ -9,9 +9,9 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app: airflow  # Adjust to match your Airflow service labels
+      app: airflow  # Adjust this to match your Airflow service labels
   endpoints:
-  - port: metrics
+  - port: metrics  # Adjust port name to match your service
     path: /metrics
     interval: 30s
   namespaceSelector:
