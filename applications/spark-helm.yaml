@@ -12,17 +12,26 @@ spec:
     - repoURL: git@github.com:ibrahimself/data-platform-k8s-configs.git
       targetRevision: HEAD
       ref: values
-    # Source 2: Helm chart
     - repoURL: https://kubeflow.github.io/spark-operator
       chart: spark-operator
       targetRevision: 1.1.27
       helm:
         releaseName: spark-operator
         values: |
-          # Match exactly what worked in Helm
+          # CRITICAL: Use numeric log level
+          logLevel: 2
+          
+          # CRITICAL: Use correct image
+          image:
+            repository: gcr.io/spark-operator/spark-operator
+            tag: v1beta2-1.3.8-3.1.1
+            pullPolicy: IfNotPresent
+          
           webhook:
             enable: false
+          
           sparkJobNamespace: spark
+          
           serviceAccounts:
             spark:
               create: true
@@ -30,14 +39,18 @@ spec:
             sparkoperator:
               create: true
               name: spark-operator
+          
           rbac:
             create: true
             createRole: true
             createClusterRole: true
+          
           controllerThreads: 10
           resyncInterval: 30
+          
           batchScheduler:
             enable: false
+          
           resources:
             limits:
               cpu: 200m
@@ -45,15 +58,30 @@ spec:
             requests:
               cpu: 100m
               memory: 300Mi
+          
           metrics:
             enable: true
             port: 10254
             endpoint: /metrics
+          
           uiService:
             enable: true
+          
           resourceQuotaEnforcement:
             enable: false
-          logLevel: info
+          
+          # Node affinity to avoid overloaded nodes
+          affinity:
+            nodeAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+              - weight: 100
+                preference:
+                  matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: NotIn
+                    values:
+                    - ip-10-0-2-152.eu-west-3.compute.internal
+                    - ip-10-0-2-5.eu-west-3.compute.internal
   destination:
     server: https://kubernetes.default.svc
     namespace: spark
@@ -63,8 +91,8 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
-      - ApplyOutOfSyncOnly=true  # Only apply changes
-      - SkipHooks=true           # Skip hooks
+      - ApplyOutOfSyncOnly=true
+      - SkipHooks=true
       - RespectIgnoreDifferences=true
     retry:
       limit: 5
@@ -72,15 +100,3 @@ spec:
         duration: 5s
         factor: 2
         maxDuration: 3m
-  ignoreDifferences:
-    - group: "*"
-      kind: "*"
-      jsonPointers:
-        - /metadata/annotations
-        - /metadata/labels
-    - group: "rbac.authorization.k8s.io"
-      kind: ClusterRole
-      name: spark-operator
-    - group: "rbac.authorization.k8s.io"
-      kind: ClusterRoleBinding
-      name: spark-operator
