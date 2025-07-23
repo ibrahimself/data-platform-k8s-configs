@@ -18,18 +18,20 @@ spec:
       helm:
         releaseName: spark-operator
         values: |
-          # CRITICAL: Use numeric log level
+          # Use numeric log level (not "info")
           logLevel: 2
           
-          # CRITICAL: Use correct image
+          # Use the correct image from GitHub Container Registry
           image:
-            repository: gcr.io/spark-operator/spark-operator
+            repository: ghcr.io/googlecloudplatform/spark-operator
             tag: v1beta2-1.3.8-3.1.1
             pullPolicy: IfNotPresent
           
+          # Disable webhooks to avoid complexity
           webhook:
             enable: false
           
+          # Namespace to watch for Spark applications
           sparkJobNamespace: spark
           
           serviceAccounts:
