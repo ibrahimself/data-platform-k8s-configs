@@ -1,4 +1,7 @@
-# Apache Airflow configuration for Data Platform
+# Apache Airflow configuration - Working version
+
+# Use KubernetesExecutor
+executor: "KubernetesExecutor"
 
 # Airflow image
 images:
@@ -6,9 +9,6 @@ images:
     repository: apache/airflow
     tag: "2.10.5"
     pullPolicy: IfNotPresent
-
-# Airflow executor - KubernetesExecutor for scalability
-executor: "KubernetesExecutor"
 
 # Environment variables
 env:
@@ -22,80 +22,19 @@ env:
     value: "airflow"
   - name: AIRFLOW__KUBERNETES__WORKER_SERVICE_ACCOUNT_NAME
     value: "airflow-worker"
-  - name: AIRFLOW__KUBERNETES__WORKER_CONTAINER_REPOSITORY
-    value: "apache/airflow"
-  - name: AIRFLOW__KUBERNETES__WORKER_CONTAINER_TAG
-    value: "2.10.5"
-  - name: AIRFLOW__WEBSERVER__BASE_URL
-    value: "http://localhost:8080/airflow"
-  # Metrics configuration
-  - name: AIRFLOW__METRICS__STATSD_ON
-    value: "True"
-  - name: AIRFLOW__METRICS__STATSD_HOST
-    value: "airflow-statsd"
-  - name: AIRFLOW__METRICS__STATSD_PORT
-    value: "9125"
-  - name: AIRFLOW__METRICS__STATSD_PREFIX
-    value: "airflow"
-  - name: AIRFLOW__SCHEDULER__STATSD_ON
-    value: "True"
-  - name: AIRFLOW__SCHEDULER__STATSD_HOST
-    value: "airflow-statsd"
-  - name: AIRFLOW__SCHEDULER__STATSD_PORT
-    value: "9125"
 
-# Extra environment variables from secrets
-extraEnvFrom: |
-  - secretRef:
-      name: airflow-webserver-secret
+# Disable internal PostgreSQL
+postgresql:
+  enabled: false
 
-# Airflow configuration overrides
-config:
-  api:
-    auth_backend: airflow.api.auth.backend.basic_auth
-  core:
-    dags_are_paused_at_creation: "True"
-    load_default_connections: "False"
-    colored_console_log: "False"
-  kubernetes:
-    delete_worker_pods: "True"
-    delete_worker_pods_on_failure: "False"
-    worker_pods_creation_batch_size: "10"
-  webserver:
-    expose_config: "True"
-    rbac: "True"
-  email:
-    email_backend: airflow.utils.email.send_email_smtp
-    smtp_host: localhost
-    smtp_starttls: "False"
-    smtp_ssl: "False"
-    smtp_port: "25"
-
-# Database - Use external PostgreSQL
+# External database configuration
 data:
   metadataSecretName: airflow-metadata-secret
   resultBackendSecretName: airflow-result-backend-secret
 
-# PostgreSQL - Disabled, using external
-postgresql:
-  enabled: false
-
 # Webserver configuration
 webserver:
   replicas: 1
-  resources:
-    requests:
-      cpu: 500m
-      memory: 1Gi
-    limits:
-      cpu: 1000m
-      memory: 2Gi
-  service:
-    type: ClusterIP
-    ports:
-      - name: airflow-ui
-        port: 8080
-  # Default admin user
   defaultUser:
     enabled: true
     role: Admin
@@ -108,53 +47,18 @@ webserver:
 # Scheduler configuration
 scheduler:
   replicas: 1
-  resources:
-    requests:
-      cpu: 500m
-      memory: 1Gi
-    limits:
-      cpu: 1000m
-      memory: 2Gi
-  # Enable log cleanup
-  logGroomerSidecar:
-    enabled: true
-    retentionDays: 30
 
-# Workers configuration (for KubernetesExecutor)
-workers:
-  resources:
-    requests:
-      cpu: 500m
-      memory: 1Gi
-    limits:
-      cpu: 1000m
-      memory: 2Gi
-  # Service account for workers
-  serviceAccount:
-    create: true
-    name: airflow-worker
-
-# Triggerer configuration
+# Disable Triggerer temporarily to simplify deployment
 triggerer:
-  enabled: true
-  replicas: 1
-  resources:
-    requests:
-      cpu: 250m
-      memory: 512Mi
-    limits:
-      cpu: 500m
-      memory: 1Gi
-
-# Redis - Disabled for KubernetesExecutor
-redis:
   enabled: false
 
-# Flower - Disabled for KubernetesExecutor
+# Disable components not needed for KubernetesExecutor
+redis:
+  enabled: false
 flower:
   enabled: false
 
-# DAGs configuration
+# DAGs persistence
 dags:
   persistence:
     enabled: true
@@ -162,107 +66,74 @@ dags:
     storageClassName: gp2
     accessMode: ReadWriteOnce
     existingClaim: airflow-dags
-  gitSync:
-    enabled: false
 
-# Logs configuration
+# Disable logs persistence (use stdout/stderr)
 logs:
   persistence:
     enabled: false
 
-# Fernet key configuration
-fernetKey: null
+# Fernet key
 fernetKeySecretName: airflow-fernet-key
 
-# ServiceAccount
+# Service account
 serviceAccount:
   create: true
   name: airflow
-  annotations: {}
+
+# Workers service account
+workers:
+  serviceAccount:
+    create: true
+    name: airflow-worker
 
 # RBAC
 rbac:
   create: true
-  createSCCRoleBinding: false
 
-# Security context
+# Security contexts
 securityContext:
   runAsUser: 50000
   runAsGroup: 0
   fsGroup: 0
 
-# Pod security context
-podSecurityContext:
-  runAsUser: 50000
-  runAsGroup: 0
-  fsGroup: 0
-
-# Node selector
-nodeSelector: {}
-
-# Monitoring
-metrics:
-  enabled: true
-  serviceMonitor:
-    enabled: true
-    interval: 30s
-    labels:
-      prometheus: kube-prometheus
-      release: prometheus-stack
-
 # StatsD for metrics
 statsd:
   enabled: true
-  resources:
-    requests:
-      cpu: 100m
-      memory: 128Mi
-    limits:
-      cpu: 200m
-      memory: 256Mi
 
 # Cleanup
 cleanup:
   enabled: true
   schedule: "0 0 * * *"
 
-# Extra pip packages to install
-extraPipPackages:
-  - apache-airflow-providers-kubernetes>=8.0.0
-  - apache-airflow-providers-amazon>=8.0.0
-  - apache-airflow-providers-postgres>=5.0.0
-  - apache-airflow-providers-http>=4.0.0
-  - apache-airflow-providers-spark>=4.0.0
-  - pandas>=2.0.0
-  - numpy>=1.24.0
-
-# Extra volume mounts for DAGs
-extraVolumeMounts:
-  - name: dags
-    mountPath: /opt/airflow/dags
-
-extraVolumes:
-  - name: dags
-    persistentVolumeClaim:
-      claimName: airflow-dags
-
-# Ingress configuration (disabled - we manage it separately)
+# Disable ingress (we manage it separately)
 ingress:
   enabled: false
 
-# Create user job
-createUserJob:
-  useHelmHooks: false
-  applyCustomEnv: false
-  jobAnnotations:
-    "argocd.argoproj.io/hook": Sync
-    "argocd.argoproj.io/hook-delete-policy": HookSucceeded
-
-# Migrate database job
+# Migration job settings - with timeout
 migrateDatabaseJob:
   enabled: true
   useHelmHooks: false
-  applyCustomEnv: false
   jobAnnotations:
     "argocd.argoproj.io/hook": Sync
     "argocd.argoproj.io/hook-delete-policy": HookSucceeded
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "200m"
+
+# Create user job settings - with timeout  
+createUserJob:
+  useHelmHooks: false
+  jobAnnotations:
+    "argocd.argoproj.io/hook": Sync
+    "argocd.argoproj.io/hook-delete-policy": HookSucceeded
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "200m"
