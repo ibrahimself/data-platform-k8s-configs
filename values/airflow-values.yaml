@@ -1,27 +1,11 @@
-# Apache Airflow configuration - Working version
+# Apache Airflow configuration for Data Platform
 
-# Use KubernetesExecutor
 executor: "KubernetesExecutor"
 
-# Airflow image
 images:
   airflow:
     repository: apache/airflow
     tag: "2.10.5"
-    pullPolicy: IfNotPresent
-
-# Environment variables
-env:
-  - name: AIRFLOW__CORE__LOAD_EXAMPLES
-    value: "False"
-  - name: AIRFLOW__WEBSERVER__EXPOSE_CONFIG
-    value: "True"
-  - name: AIRFLOW__CORE__EXECUTOR
-    value: "KubernetesExecutor"
-  - name: AIRFLOW__KUBERNETES__NAMESPACE
-    value: "airflow"
-  - name: AIRFLOW__KUBERNETES__WORKER_SERVICE_ACCOUNT_NAME
-    value: "airflow-worker"
 
 # Disable internal PostgreSQL
 postgresql:
@@ -36,23 +20,21 @@ data:
 webserver:
   replicas: 1
   defaultUser:
-    enabled: true
-    role: Admin
-    username: admin
-    email: admin@example.com
-    firstName: Admin
-    lastName: User
-    password: admin
+    enabled: false  # We already created the user
+  waitForMigrations:
+    enabled: false  # Database is already initialized
 
-# Scheduler configuration
+# Scheduler configuration  
 scheduler:
   replicas: 1
+  waitForMigrations:
+    enabled: false  # Database is already initialized
 
-# Disable Triggerer temporarily to simplify deployment
+# Disable triggerer for now
 triggerer:
   enabled: false
 
-# Disable components not needed for KubernetesExecutor
+# Disable unused components
 redis:
   enabled: false
 flower:
@@ -67,7 +49,7 @@ dags:
     accessMode: ReadWriteOnce
     existingClaim: airflow-dags
 
-# Disable logs persistence (use stdout/stderr)
+# Logs persistence
 logs:
   persistence:
     enabled: false
@@ -75,12 +57,11 @@ logs:
 # Fernet key
 fernetKeySecretName: airflow-fernet-key
 
-# Service account
+# Service accounts
 serviceAccount:
   create: true
   name: airflow
 
-# Workers service account
 workers:
   serviceAccount:
     create: true
@@ -96,44 +77,35 @@ securityContext:
   runAsGroup: 0
   fsGroup: 0
 
+# Monitoring
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    labels:
+      prometheus: kube-prometheus
+      release: prometheus-stack
+
 # StatsD for metrics
 statsd:
   enabled: true
-
-# Cleanup
-cleanup:
-  enabled: true
-  schedule: "0 0 * * *"
 
 # Disable ingress (we manage it separately)
 ingress:
   enabled: false
 
-# Migration job settings - with timeout
+# Disable migration job (already done)
 migrateDatabaseJob:
-  enabled: true
-  useHelmHooks: false
-  jobAnnotations:
-    "argocd.argoproj.io/hook": Sync
-    "argocd.argoproj.io/hook-delete-policy": HookSucceeded
-  resources:
-    requests:
-      memory: "256Mi"
-      cpu: "100m"
-    limits:
-      memory: "512Mi"
-      cpu: "200m"
+  enabled: false
 
-# Create user job settings - with timeout  
+# Disable create user job (already done)
 createUserJob:
-  useHelmHooks: false
-  jobAnnotations:
-    "argocd.argoproj.io/hook": Sync
-    "argocd.argoproj.io/hook-delete-policy": HookSucceeded
-  resources:
-    requests:
-      memory: "256Mi"
-      cpu: "100m"
-    limits:
-      memory: "512Mi"
-      cpu: "200m"
+  enabled: false
+
+# Extra pip packages
+extraPipPackages:
+  - apache-airflow-providers-kubernetes>=8.0.0
+  - apache-airflow-providers-postgres>=5.0.0
+  - apache-airflow-providers-amazon>=8.0.0
+  - apache-airflow-providers-spark>=4.0.0
