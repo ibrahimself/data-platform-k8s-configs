@@ -171,6 +171,7 @@ logs:
     enabled: true
     size: 20Gi
     storageClassName: gp2
+    accessMode: ReadWriteOnce 
 
 # Fernet key configuration
 fernetKey: null
