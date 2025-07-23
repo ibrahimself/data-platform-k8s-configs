@@ -3,21 +3,23 @@ kind: Application
 metadata:
   name: airflow
   namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
 spec:
   project: data-platform
   sources:
-    # Helm chart source
-    - repoURL: https://airflow-helm.github.io/charts
+    # Source 1: Git repo for values file
+    - repoURL: git@github.com:ibrahimself/data-platform-k8s-configs.git
+      targetRevision: HEAD
+      ref: values
+    # Source 2: Helm chart from Apache Airflow
+    - repoURL: https://airflow.apache.org
       chart: airflow
-      targetRevision: 8.9.0  # Latest stable version of airflow-helm chart
+      targetRevision: 1.16.0  # For Airflow 2.10.5
       helm:
         releaseName: airflow
         valueFiles:
           - $values/values/airflow-values.yaml
-    # Git repo with values
-    - repoURL: git@github.com:ibrahimself/data-platform-k8s-configs.git
-      targetRevision: main
-      ref: values
   destination:
     server: https://kubernetes.default.svc
     namespace: airflow
@@ -27,9 +29,8 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
-    retry:
-      limit: 5
-      backoff:
-        duration: 5s
-        factor: 2
-        maxDuration: 3m
+      - ServerSideApply=true
+  # Sync wave to ensure namespace and secrets exist first
+  info:
+    - name: 'sync-wave'
+      value: '10'

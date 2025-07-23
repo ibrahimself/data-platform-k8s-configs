@@ -1,127 +1,64 @@
-# Apache Airflow Official Helm Chart Configuration
-# Chart: apache/airflow (from https://airflow.apache.org)
+# Apache Airflow configuration - Working version
 
-# Airflow version and executor
-airflowVersion: "2.10.5"
+# Use KubernetesExecutor
 executor: "KubernetesExecutor"
 
-# Airflow Images
+# Airflow image
 images:
   airflow:
     repository: apache/airflow
     tag: "2.10.5"
     pullPolicy: IfNotPresent
-  pod_template:
-    repository: apache/airflow
-    tag: "2.10.5"
-    pullPolicy: IfNotPresent
 
-# Default airflow user
-defaultAirflowTag: "2.10.5"
-
-# Environment variables from ConfigMaps and Secrets
-env: []
-
-# Airflow database connection
-data:
-  metadataSecretName: airflow-metadata-secret
-  resultBackendSecretName: airflow-result-backend-secret
-
-# Fernet key configuration
-fernetKeySecretName: airflow-fernet-key
-
-# Webserver secret key
-webserverSecretKeySecretName: airflow-webserver-secret-key
+# Environment variables
+env:
+  - name: AIRFLOW__CORE__LOAD_EXAMPLES
+    value: "False"
+  - name: AIRFLOW__WEBSERVER__EXPOSE_CONFIG
+    value: "True"
+  - name: AIRFLOW__CORE__EXECUTOR
+    value: "KubernetesExecutor"
+  - name: AIRFLOW__KUBERNETES__NAMESPACE
+    value: "airflow"
+  - name: AIRFLOW__KUBERNETES__WORKER_SERVICE_ACCOUNT_NAME
+    value: "airflow-worker"
 
 # Disable internal PostgreSQL
 postgresql:
   enabled: false
 
-# Disable internal Redis (not needed for KubernetesExecutor)
-redis:
-  enabled: false
+# External database configuration
+data:
+  metadataSecretName: airflow-metadata-secret
+  resultBackendSecretName: airflow-result-backend-secret
+
+# Webserver configuration
+webserver:
+  replicas: 1
+  defaultUser:
+    enabled: true
+    role: Admin
+    username: admin
+    email: admin@example.com
+    firstName: Admin
+    lastName: User
+    password: admin
 
 # Scheduler configuration
 scheduler:
   replicas: 1
-  resources:
-    limits:
-      cpu: 1000m
-      memory: 2Gi
-    requests:
-      cpu: 500m
-      memory: 1Gi
-  # Disable wait for migrations (already done)
-  waitForMigrations:
-    enabled: false
-  logGroomerSidecar:
-    enabled: true
-    retentionDays: 15
 
-# Webserver configuration  
-webserver:
-  replicas: 1
-  resources:
-    limits:
-      cpu: 1000m
-      memory: 2Gi
-    requests:
-      cpu: 500m
-      memory: 1Gi
-  service:
-    type: ClusterIP
-    ports:
-      - name: airflow-ui
-        port: 8080
-  # Disable default user creation (already done)
-  defaultUser:
-    enabled: false
-  # Disable wait for migrations (already done)
-  waitForMigrations:
-    enabled: false
-
-# Workers configuration (for KubernetesExecutor)
-workers:
-  replicas: 1
-  resources:
-    limits:
-      cpu: 1000m
-      memory: 2Gi
-    requests:
-      cpu: 500m
-      memory: 1Gi
-  serviceAccount:
-    create: true
-    name: airflow-worker
-
-# Triggerer configuration
+# Disable Triggerer temporarily to simplify deployment
 triggerer:
-  enabled: false  # Enable later if using deferrable operators
-  replicas: 1
-  resources:
-    limits:
-      cpu: 500m
-      memory: 1Gi
-    requests:
-      cpu: 250m
-      memory: 512Mi
+  enabled: false
 
-# Flower UI
+# Disable components not needed for KubernetesExecutor
+redis:
+  enabled: false
 flower:
-  enabled: false  # Not needed for KubernetesExecutor
+  enabled: false
 
-# StatsD for metrics
-statsd:
-  enabled: true
-  resources:
-    limits:
-      cpu: 200m
-      memory: 256Mi
-    requests:
-      cpu: 100m
-      memory: 128Mi
-
-# Git sync for DAGs
+# DAGs persistence
 dags:
   persistence:
     enabled: true
@@ -129,125 +66,74 @@ dags:
     storageClassName: gp2
     accessMode: ReadWriteOnce
     existingClaim: airflow-dags
-  gitSync:
-    enabled: false  # Configure later if needed
 
-# Logs configuration
+# Disable logs persistence (use stdout/stderr)
 logs:
   persistence:
-    enabled: false  # Use emptyDir for now
-    
-# Security contexts
-securityContexts:
-  pod:
-    runAsUser: 50000
-    runAsGroup: 0
-    fsGroup: 0
-  container:
-    runAsUser: 50000
-    runAsGroup: 0
+    enabled: false
+
+# Fernet key
+fernetKeySecretName: airflow-fernet-key
 
 # Service account
 serviceAccount:
   create: true
   name: airflow
-  
+
+# Workers service account
+workers:
+  serviceAccount:
+    create: true
+    name: airflow-worker
+
 # RBAC
 rbac:
   create: true
-  createSCCRoleBinding: false
 
-# Node selector
-nodeSelector: {}
+# Security contexts
+securityContext:
+  runAsUser: 50000
+  runAsGroup: 0
+  fsGroup: 0
 
-# Affinity
-affinity: {}
+# StatsD for metrics
+statsd:
+  enabled: true
 
-# Tolerations
-tolerations: []
-
-# Ingress configuration
-ingress:
-  enabled: false  # We manage ingress separately
-
-# Pod annotations
-podAnnotations: {}
-
-# Extra pip packages
-extraPipPackages:
-  - apache-airflow-providers-kubernetes>=8.0.0
-  - apache-airflow-providers-postgres>=5.0.0
-  - apache-airflow-providers-amazon>=8.0.0
-  - apache-airflow-providers-spark>=4.0.0
-  - apache-airflow-providers-http>=4.0.0
-  - pandas>=2.0.0
-  - numpy>=1.24.0
-
-# Configuration overrides
-config:
-  core:
-    load_examples: 'False'
-    colored_console_log: 'False'
-    executor: 'KubernetesExecutor'
-    parallelism: '32'
-    dag_concurrency: '16'
-    max_active_runs_per_dag: '16'
-  kubernetes_executor:
-    namespace: 'airflow'
-    worker_container_repository: 'apache/airflow'
-    worker_container_tag: '2.10.5'
-    delete_worker_pods: 'True'
-    delete_worker_pods_on_failure: 'False'
-  logging:
-    logging_level: 'INFO'
-    fab_logging_level: 'WARN'
-  webserver:
-    expose_config: 'True'
-    rbac: 'True'
-    base_url: 'http://localhost:8080'
-    default_ui_timezone: 'UTC'
-  metrics:
-    statsd_on: 'True'
-    statsd_host: 'airflow-statsd'
-    statsd_port: '9125'
-    statsd_prefix: 'airflow'
-  scheduler:
-    statsd_on: 'True'
-
-# Disable database migration job (already done manually)
-migrateDatabaseJob:
-  enabled: false
-  useHelmHooks: false
-
-# Disable create user job (already done manually)  
-createUserJob:
-  enabled: false
-  useHelmHooks: false
-
-# Extra manifests
-extraManifests: []
-
-# Pod disruption budget
-podDisruptionBudget:
-  enabled: false
-
-# Limits for connections, pools, etc.
-limits: []
-
-# Cleanup configuration
+# Cleanup
 cleanup:
   enabled: true
   schedule: "0 0 * * *"
 
-# Monitoring with Prometheus
-metrics:
-  enabled: true
-  serviceMonitor:
-    enabled: false  # Enable if you have Prometheus Operator
-    interval: 30s
+# Disable ingress (we manage it separately)
+ingress:
+  enabled: false
 
-# Resources for init containers
-initContainers:
-  resources: {}
-  waitForMigrations:
-    enabled: false  # Already initialized
+# Migration job settings - with timeout
+migrateDatabaseJob:
+  enabled: true
+  useHelmHooks: false
+  jobAnnotations:
+    "argocd.argoproj.io/hook": Sync
+    "argocd.argoproj.io/hook-delete-policy": HookSucceeded
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "200m"
+
+# Create user job settings - with timeout  
+createUserJob:
+  useHelmHooks: false
+  jobAnnotations:
+    "argocd.argoproj.io/hook": Sync
+    "argocd.argoproj.io/hook-delete-policy": HookSucceeded
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "200m"
