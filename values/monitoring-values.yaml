@@ -1,22 +1,21 @@
 # monitoring-values.yaml - COMPLETE FIXED VERSION
-# Minimal resource configuration to fit within quota
+# Fixes: storage class, alertmanager URL, and webhook configuration
 
 # Global settings
 global:
   evaluation_interval: 30s
   scrape_interval: 30s
 
-# Prometheus Operator - FIXED CONFIGURATION
+# Prometheus Operator
 prometheusOperator:
   enabled: true
-  # FIX: Enable webhooks to match the deployment expectations
   admissionWebhooks:
-    enabled: true        # Changed from false to true
+    enabled: true
     patch:
-      enabled: true      # Changed from false to true
+      enabled: true
       image:
         repository: registry.k8s.io/ingress-nginx/kube-webhook-certgen
-        tag: v20240813       # Latest stable version
+        tag: v20240813
         pullPolicy: IfNotPresent
       resources:
         requests:
@@ -25,13 +24,8 @@ prometheusOperator:
         limits:
           cpu: 100m
           memory: 100Mi
-      # Patch job will create the certificates
-      nodeSelector: {}
-      affinity: {}
-      tolerations: []
-      podAnnotations: {}
   tls:
-    enabled: true        # Explicitly enable TLS
+    enabled: true
   resources:
     requests:
       cpu: 100m
@@ -40,19 +34,20 @@ prometheusOperator:
       cpu: 200m
       memory: 256Mi
 
-# Prometheus - with cross-namespace monitoring
+# Prometheus - with fixed storage class
 prometheus:
   enabled: true
   prometheusSpec:
     replicas: 1
-    externalUrl: /prometheus
+    # Use http scheme for external URL
+    externalUrl: http://localhost/prometheus
     routePrefix: /prometheus
     retention: 7d
     
     # Enable cross-namespace monitoring
     serviceMonitorSelectorNilUsesHelmValues: false
-    serviceMonitorSelector: {}  # Empty = monitor all ServiceMonitors
-    serviceMonitorNamespaceSelector: {}  # Empty = all namespaces
+    serviceMonitorSelector: {}
+    serviceMonitorNamespaceSelector: {}
     
     podMonitorSelectorNilUsesHelmValues: false
     podMonitorSelector: {}
@@ -72,13 +67,13 @@ prometheus:
     storageSpec:
       volumeClaimTemplate:
         spec:
-          storageClassName: gp3
+          storageClassName: gp2  # FIXED: Changed from gp3 to gp2
           accessModes: ["ReadWriteOnce"]
           resources:
             requests:
               storage: 50Gi
 
-# Grafana - minimal resources
+# Grafana
 grafana:
   enabled: true
   adminPassword: "changeme123!"
@@ -92,7 +87,7 @@ grafana:
       memory: 256Mi
   persistence:
     enabled: true
-    storageClassName: gp2
+    storageClassName: gp2  # Already correct
     size: 5Gi
   sidecar:
     dashboards:
@@ -119,12 +114,13 @@ grafana:
       root_url: "%(protocol)s://%(domain)s/grafana"
       serve_from_sub_path: true
 
-# AlertManager - minimal resources
+# AlertManager - with fixed external URL
 alertmanager:
   enabled: true
   alertmanagerSpec:
     replicas: 1
-    externalUrl: /alertmanager
+    # FIXED: Added http scheme
+    externalUrl: http://localhost/alertmanager
     routePrefix: /alertmanager
     resources:
       requests:
@@ -137,11 +133,12 @@ alertmanager:
       volumeClaimTemplate:
         spec:
           storageClassName: gp2
+          accessModes: ["ReadWriteOnce"]
           resources:
             requests:
               storage: 5Gi
 
-# Node Exporter - minimal
+# Node Exporter
 nodeExporter:
   enabled: true
   resources:
@@ -152,7 +149,7 @@ nodeExporter:
       cpu: 100m
       memory: 64Mi
 
-# Kube State Metrics - minimal
+# Kube State Metrics
 kubeStateMetrics:
   enabled: true
   resources:

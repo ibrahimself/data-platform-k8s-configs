@@ -1,0 +1,19 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: prometheus-operator-webhook-cert-patch
+  namespace: monitoring
+spec:
+  template:
+    spec:
+      containers:
+      - name: create-cert
+        image: registry.k8s.io/ingress-nginx/kube-webhook-certgen:v20240813
+        args:
+          - create
+          - --host=prometheus-stack-kube-prom-operator,prometheus-stack-kube-prom-operator.monitoring,prometheus-stack-kube-prom-operator.monitoring.svc,prometheus-stack-kube-prom-operator.monitoring.svc.cluster.local
+          - --namespace=monitoring
+          - --secret-name=prometheus-stack-kube-prom-admission
+          - --cert-name=cert
+          - --key-name=key
+      restartPolicy: OnFailure

@@ -5,6 +5,7 @@ namespace: monitoring
 
 resources:
   - namespace.yaml
+  - create-webhook-cert
   - ingress.yaml
   - prometheus-rbac.yaml
   - servicemonitors/spark-servicemonitor.yaml 
