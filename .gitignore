@@ -14,7 +14,7 @@ Thumbs.db
 *.orig
 
 # Secrets (never commit these!)
-*-secrets.yaml
+#*-secrets.yaml
 *.key
 *.pem
 *.crt

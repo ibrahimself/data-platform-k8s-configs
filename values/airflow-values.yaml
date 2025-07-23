@@ -44,6 +44,11 @@ env:
   - name: AIRFLOW__SCHEDULER__STATSD_PORT
     value: "9125"
 
+# Extra environment variables from secrets
+extraEnvFrom: |
+  - secretRef:
+      name: airflow-webserver-secret
+
 # Airflow configuration overrides
 config:
   api:
@@ -99,8 +104,6 @@ webserver:
     firstName: Admin
     lastName: User
     password: admin
-  # Use extraSecretEnv instead of secretName
-  extraSecretEnv: "airflow-webserver-secret"
 
 # Scheduler configuration
 scheduler:
@@ -209,7 +212,7 @@ metrics:
       prometheus: kube-prometheus
       release: prometheus-stack
 
-# StatsD for metrics - simplified configuration
+# StatsD for metrics
 statsd:
   enabled: true
   resources:
