@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: dremio-metrics
+  namespace: monitoring
+  labels:
+    app: dremio
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app: dremio  # Adjust to match your Dremio service labels
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+  namespaceSelector:
+    matchNames:
+    - dremio

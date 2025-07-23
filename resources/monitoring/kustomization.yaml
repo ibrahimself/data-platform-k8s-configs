@@ -6,6 +6,10 @@ namespace: monitoring
 resources:
   - namespace.yaml
   - ingress.yaml
+  - prometheus-rbac.yaml
+  - servicemonitors/spark-servicemonitor.yaml 
+  - servicemonitors/dremio-servicemonitor.yaml 
+  - servicemonitors/airflow-servicemonitor.yaml 
 
 commonLabels:
   app.kubernetes.io/part-of: data-platform

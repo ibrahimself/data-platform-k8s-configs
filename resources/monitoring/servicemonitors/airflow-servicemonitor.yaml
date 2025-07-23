@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: airflow-metrics
+  namespace: monitoring
+  labels:
+    app: airflow
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app: airflow  # Adjust to match your Airflow service labels
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+  namespaceSelector:
+    matchNames:
+    - airflow

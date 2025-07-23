@@ -1,0 +1,33 @@
+# Additional permissions for cross-namespace monitoring
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: prometheus-cross-namespace-monitoring
+rules:
+- apiGroups: [""]
+  resources:
+  - services
+  - endpoints
+  - pods
+  verbs: ["get", "list", "watch"]
+  # Add specific namespaces if needed
+- apiGroups: [""]
+  resources:
+  - services
+  - endpoints
+  - pods
+  verbs: ["get", "list", "watch"]
+  resourceNames: ["spark", "dremio", "airflow"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus-cross-namespace-monitoring
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus-cross-namespace-monitoring
+subjects:
+- kind: ServiceAccount
+  name: prometheus-stack-kube-prom-prometheus
+  namespace: monitoring

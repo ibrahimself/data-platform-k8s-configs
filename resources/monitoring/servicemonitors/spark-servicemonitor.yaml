@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: spark-metrics
+  namespace: monitoring  # Put in monitoring namespace
+  labels:
+    app: spark
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app: spark  # Adjust to match your Spark service labels
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+  namespaceSelector:
+    matchNames:
+    - spark
