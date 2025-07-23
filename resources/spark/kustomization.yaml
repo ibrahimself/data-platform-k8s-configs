@@ -5,7 +5,8 @@ namespace: spark
 
 resources:
   - namespace.yaml
-  - spark-history-server.yaml  # Renamed from spark-history-pvc.yaml
+  - spark-history-server.yaml
+  - spark-operator-servicemonitor.yaml
   - ingress.yaml
 
 # Create ConfigMap for Spark defaults

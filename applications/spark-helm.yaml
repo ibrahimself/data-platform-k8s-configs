@@ -7,105 +7,20 @@ metadata:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: data-platform
-  source:
-    repoURL: https://kubeflow.github.io/spark-operator
-    chart: spark-operator
-    targetRevision: 1.1.27
-    helm:
-      releaseName: spark-operator
-      skipCrds: false
-      values: |
-        # Use correct image
-        image:
-          repository: gcr.io/spark-operator/spark
-          tag: v3.0.0
-          pullPolicy: IfNotPresent
-        
-        # Basic configuration
-        sparkJobNamespace: spark
-        
-        # Webhook configuration - disabled for initial deployment
-        webhook:
-          enable: false
-          port: 8080
-          namespaceSelector: |
-            matchLabels:
-              spark-webhook: enabled
-        
-        # Service Accounts - MUST be created
-        serviceAccounts:
-          spark:
-            create: true
-            name: spark
-          sparkoperator:
-            create: true
-            name: spark-operator
-        
-        # RBAC - MUST be true for operator to work
-        rbac:
-          create: true
-          createRole: true
-          createClusterRole: true
-        
-        # Enable metrics for Prometheus
-        metrics:
-          enable: true
-          port: 10254
-          endpoint: /metrics
-          prefix: ""
-        
-        # Prometheus monitoring configuration
-        prometheus:
-          metrics:
-            enable: true
-            port: 10254
-            endpoint: /metrics
-          serviceMonitor:
-            enable: true
-            labels:
-              prometheus: kube-prometheus-stack
-              release: prometheus
-            interval: 30s
-            scrapeTimeout: 10s
-        
-        # Controller threads for performance
-        controllerThreads: 10
-        
-        # Resources
-        resources:
-          requests:
-            cpu: 100m
-            memory: 300Mi
-          limits:
-            cpu: 200m
-            memory: 500Mi
-        
-        # Log level
-        logLevel: info
-        
-        # Pod labels for better monitoring
-        podLabels:
-          monitoring: "true"
-          app.kubernetes.io/component: "spark-operator"
-        
-        # Leader election for HA
-        leaderElection:
-          lockName: spark-operator-lock
-          lockNamespace: spark
-        
-        # Spark UI service
-        uiService:
-          enable: true
-        
-        # Resource quota enforcement
-        resourceQuotaEnforcement:
-          enable: false
-        
-        # Resync interval
-        resyncInterval: 30
-        
-        # Create CRDs
-        createCRD: true
+  sources:
+    # Source 1: Git repo for values file
+    - repoURL: git@github.com:ibrahimself/data-platform-k8s-configs.git
+      targetRevision: HEAD
+      ref: values
+    # Source 2: Helm chart
+    - repoURL: https://kubeflow.github.io/spark-operator
+      chart: spark-operator
+      targetRevision: 1.1.27
+      helm:
+        releaseName: spark-operator
+        skipCrds: false
+        valueFiles:
+          - $values/values/spark-values.yaml  # Use your values file!
   destination:
     server: https://kubernetes.default.svc
     namespace: spark
@@ -124,7 +39,6 @@ spec:
         duration: 5s
         factor: 2
         maxDuration: 3m
-  # Ignore hook resources
   ignoreDifferences:
     - group: "*"
       kind: "*"
