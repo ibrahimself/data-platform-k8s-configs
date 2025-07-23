@@ -168,9 +168,7 @@ dags:
 # Logs configuration
 logs:
   persistence:
-    enabled: true
-    size: 20Gi
-    storageClassName: gp2
+    enabled: false
 
 # Fernet key configuration
 fernetKey: null
