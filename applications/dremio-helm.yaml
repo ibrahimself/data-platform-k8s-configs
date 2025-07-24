@@ -9,81 +9,57 @@ spec:
   project: default
   
   source:
-    repoURL: https://github.com/dremio/dremio-cloud-tools.git
-    path: charts/dremio_v2
-    targetRevision: master
+    # Using OCI registry for Dremio Enterprise Helm chart
+    repoURL: quay.io
+    chart: dremio/dremio-helm
+    targetRevision: "3.0.1"
     helm:
       values: |
-        # Dremio Enterprise Configuration
+        # Dremio Enterprise configuration
         dremio:
-          # Your trial image pull credentials
-          trialImagePullCredentials: "ewogICJhdXRocyI6IHsKICAgICJxdWF5LmlvIjogewogICAgICAiYXV0aCI6ICJaSEpsYldsdkszUnlhV0ZzWDJGalkyVnpjMTh3TjE4eE4xOHlNREkxT2s4d1dFYzRUbGhaTkZjeFFsZE9RMEk1T1VGUk1FdGFPRFpCVTB3MFFWZFdSRUl3UVVKQlRVUklSRVJZVkZwUFFqSktOVkJHVUVoSVdVWkJXVUZYUmtVPSIsCiAgICAgICJlbWFpbCI6ICIiCiAgICB9CiAgfQp9"
-          
-          # Your Dremio Enterprise License
+          # Your Enterprise License
           license: "eyJraWQiOiI4MGZhMjgxYzZhZjczNDNkNTE1YTVhMzg1MDg1N2RhNmE2YmEzMTU3NWE5ZjVlZmVhMmQ4MTkyMGUyM2Q2OGY0IiwiYWxnIjoiRVMyNTYifQ.eyJpc3MiOiJEcmVtaW8iLCJzdWIiOiIwMDM1ZDAwMDA3TFRkT0VBQTEiLCJuYmYiOjE3NTI3ODA0NzYsImV4cCI6MTc1NTU0NTI3NiwiaWF0IjoxNzUyNzgwNDc2LCJqdGkiOiIxNzUyNzgwNDc2MDYyVzJjciJ9.u8bxfpQvyieeGn3H8RNIyKqbIgHR4pYO0mfBDBh23WJJw58t2WsDEhbOL6rUdfyGu4hItUtcohCoSEXMaAAolg"
           
-          # Dremio Enterprise image from quay.io
-          image:
-            repository: quay.io/dremio/dremio-enterprise
-            tag: latest
-          
-          # Extra configuration for Prometheus monitoring
-          dremioConfExtraOptions:
-            # Enable Prometheus metrics
-            "services.web-admin.enabled": true
-            "services.web-admin.host": "0.0.0.0"
-            "services.web-admin.port": 9090
-            # Enable JMX
-            "java.jmx.enabled": true
-            "java.jmx.port": 9099
-            # Query settings
-            "query.planning.max-millis": 30000
-            "query.metadata.max-millis": 60000
-            # Debug settings
-            "debug.enabled": true
-            "debug.memory.heap-monitoring.enabled": true
+          # Tag for Dremio Enterprise Edition
+          tag: "26.0.1"
         
-        # Image pull secret reference
+        # Image configuration for Enterprise Edition
+        image: quay.io/dremio/dremio-ee
+        imageTag: "26.0.1"
+        
+        # Image pull secret - REQUIRED for quay.io
         imagePullSecrets:
           - i-bouabdallaoui-dataplatform-pull-secret
         
         # Service configuration
         service:
           type: LoadBalancer
-          # Uncomment below for internal load balancer
-          # annotations:
-          #   service.beta.kubernetes.io/azure-load-balancer-internal: "true"
         
-        # Coordinator configuration (matching your values-override.yaml)
+        # Coordinator configuration (for r5.xlarge nodes)
         coordinator:
+          cpu: 3       # r5.xlarge has 4 vCPUs
+          memory: 24576 # 24Gi in MB (leaving room for OS)
           count: 1
-          resources:
-            requests:
-              cpu: "32"
-              memory: "64Gi"
-            limits:
-              memory: "64Gi"
+          volumeSize: 50Gi
+          
           web:
-            auth:
-              enabled: true
-              type: "internal"
             port: 9047
+            auth:
+              type: "internal"
+          
           client:
             port: 31010
+          
           flight:
             port: 32010
-          volumeSize: 100Gi
         
-        # Executor configuration
+        # Executor configuration (for m5.2xlarge nodes)
         executor:
-          count: 3
-          resources:
-            requests:
-              cpu: "16"
-              memory: "32Gi"
-            limits:
-              memory: "32Gi"
-          volumeSize: 100Gi
+          cpu: 6        # m5.2xlarge has 8 vCPUs
+          memory: 24576 # 24Gi in MB
+          count: 3      # Start with 3, can scale to 5
+          volumeSize: 50Gi
+          
           cloudCache:
             enabled: true
             quota:
@@ -93,14 +69,12 @@ spec:
         
         # Zookeeper configuration
         zookeeper:
-          memory: 1024
           cpu: 0.5
+          memory: 1024  # 1Gi in MB
           count: 3
           volumeSize: 10Gi
         
-        # Distributed Storage - CHOOSE ONE OPTION BELOW
-        
-        # Option 1: MinIO (S3-compatible) - DEFAULT FOR TESTING
+        # Distributed Storage - MinIO (already installed)
         distStorage:
           type: "aws"
           aws:
@@ -124,29 +98,17 @@ spec:
                 <value>false</value>
               </property>
         
-        # Option 2: AWS S3 - UNCOMMENT AND UPDATE IF USING S3
-        # distStorage:
-        #   type: "aws"
-        #   aws:
-        #     bucketName: "your-s3-bucket-name"
-        #     path: "/"
-        #     authentication: "accessKeySecret"
-        #     credentials:
-        #       accessKey: "YOUR_AWS_ACCESS_KEY"
-        #       secret: "YOUR_AWS_SECRET_KEY"
+        # Extra startup parameters for Prometheus monitoring
+        extraStartParams: >-
+          -Dservices.web-admin.enabled=true
+          -Dservices.web-admin.host=0.0.0.0
+          -Dservices.web-admin.port=9090
+          -Djava.jmx.enabled=true
+          -Djava.jmx.port=9099
+          -Dquery.planning.max-millis=30000
+          -Dquery.metadata.max-millis=60000
         
-        # Option 3: Azure Storage - UNCOMMENT AND UPDATE IF USING AZURE
-        # distStorage:
-        #   type: "azureStorage"
-        #   azureStorage:
-        #     accountName: "yourstorageaccount"
-        #     authentication: "accessKey"
-        #     filesystem: "dremio-container"
-        #     path: "/"
-        #     credentials:
-        #       accessKey: "YOUR_AZURE_ACCESS_KEY"
-        
-        # Pod annotations for Prometheus
+        # Pod annotations for Prometheus scraping
         podAnnotations:
           prometheus.io/scrape: "true"
           prometheus.io/port: "9090"
