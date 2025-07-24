@@ -3,9 +3,14 @@ kind: Job
 metadata:
   name: prometheus-operator-webhook-cert-patch
   namespace: monitoring
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
 spec:
+  ttlSecondsAfterFinished: 60  # Clean up after success
   template:
     spec:
+      serviceAccountName: argocd-webhook-creator  # Need appropriate permissions
       containers:
       - name: create-cert
         image: registry.k8s.io/ingress-nginx/kube-webhook-certgen:v20240813

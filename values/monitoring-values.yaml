@@ -10,7 +10,7 @@ global:
 prometheusOperator:
   enabled: true
   admissionWebhooks:
-    enabled: true
+    enabled: false
     patch:
       enabled: true
       image:

@@ -30,7 +30,8 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
-      - Replace=true  # Add this to replace existing resources
+      - Replace=true
+      - SkipDryRunOnMissingResource=true 
     retry:
       limit: 5
       backoff:
