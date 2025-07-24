@@ -8,29 +8,135 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: git@github.com:ibrahimself/data-platform-k8s-configs.git
-    path: resources/dremio-chart
-    targetRevision: HEAD  # or specific branch/tag
+    repoURL: oci://quay.io/dremio
+    chart: dremio-helm
+    targetRevision: 3.0.1
     helm:
-      valueFiles:
-        - values.yaml
+      values: |
+        # License and image
+        dremio:
+          license: "eyJraWQiOiI4MGZhMjgxYzZhZjczNDNkNTE1YTVhMzg1MDg1N2RhNmE2YmEzMTU3NWE5ZjVlZmVhMmQ4MTkyMGUyM2Q2OGY0IiwiYWxnIjoiRVMyNTYifQ.eyJpc3MiOiJEcmVtaW8iLCJzdWIiOiIwMDM1ZDAwMDA3TFRkT0VBQTEiLCJuYmYiOjE3NTI3ODA0NzYsImV4cCI6MTc1NTU0NTI3NiwiaWF0IjoxNzUyNzgwNDc2LCJqdGkiOiIxNzUyNzgwNDc2MDYyVzJjciJ9.u8bxfpQvyieeGn3H8RNIyKqbIgHR4pYO0mfBDBh23WJJw58t2WsDEhbOL6rUdfyGu4hItUtcohCoSEXMaAAolg"
+          
+          image:
+            repository: quay.io/dremio/dremio-enterprise
+            tag: 26.0.1
+
+        imagePullSecrets:
+          - dremio-quay-secret
+
+        # Basic configuration with reasonable resources
+        coordinator:
+          master:
+            resources:
+              requests:
+                cpu: "4"
+                memory: "16Gi"
+              limits:
+                cpu: "4"
+                memory: "16Gi"
+            volumeSize: "100Gi"
+            count: 1
+          count: 0
+
+        executor:
+          resources:
+            requests:
+              cpu: "4"
+              memory: "16Gi"
+            limits:
+              cpu: "4"
+              memory: "16Gi"
+          count: 2
+          volumeSize: "64Gi"
+          engines: ["default"]
+          cloudCache:
+            enabled: false
+
+        service:
+          type: ClusterIP
+
+        zookeeper:
+          resources:
+            requests:
+              cpu: "1"
+              memory: "2Gi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+          volumeSize: "10Gi"
+          count: 1
+
+        # MinIO Storage
+        distStorage:
+          type: "aws"
+          aws:
+            bucketName: "dremio-dist-storage"
+            path: "/"
+            authentication: "accessKeySecret"
+            credentials:
+              accessKey: "minioadmin"
+              secret: "minioadmin123"
+            extraProperties: |
+              <property>
+                <n>fs.s3a.endpoint</n>
+                <value>http://minio.minio.svc.cluster.local:9000</value>
+              </property>
+              <property>
+                <n>fs.s3a.path.style.access</n>
+                <value>true</value>
+              </property>
+              <property>
+                <n>dremio.s3.compat</n>
+                <value>true</value>
+              </property>
+              <property>
+                <n>fs.s3a.connection.ssl.enabled</n>
+                <value>false</value>
+              </property>
+
+        # Disable optional components
+        engineOperator:
+          enabled: false
+          replicas: 0
+
+        catalog:
+          enabled: false
+          replicas: 0
+
+        catalogservices:
+          enabled: false
+          replicas: 0
+
+        mongodb:
+          enabled: false
+          replicas: 0
+
+        mongodbOperator:
+          enabled: false
+          replicas: 0
+
+        opensearch:
+          enabled: false
+
+        nats:
+          enabled: false
+          replicas: 0
+
+        telemetry:
+          enabled: false
+
   destination:
     server: https://kubernetes.default.svc
     namespace: dremio
   syncPolicy:
     automated:
       prune: true
-      selfHeal: false  # Disable self-heal
+      selfHeal: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
   ignoreDifferences:
   - group: apps
-    kind: Deployment
-    name: dremio-mongodb-operator
-  - group: apps
-    kind: Deployment
-    name: dremio-catalog-server
-  - group: apps
-    kind: Deployment
-    name: dremio-catalog-services-server
-  - group: apps
-    kind: Deployment  
-    name: engine-operator
+    kind: StatefulSet
+    jsonPointers:
+    - /spec/volumeClaimTemplates
