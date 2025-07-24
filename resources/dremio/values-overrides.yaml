@@ -93,24 +93,34 @@ opensearch:
   replicas: 0
 
 catalog:
+  enabled: false
   replicas: 0
 catalogservices:
+  enabled: false
   replicas: 0
 catalogServiceServer:
+  enabled: false
   replicas: 0
 mongodb:
-  imagePullSecrets:
-    - name: i-bouabdallaoui-dataplatform-pull-secret
+  enabled: false
   replicas: 0
 mongodbOperator:
+  image:
+    repository: quay.io/dremio/dremio-mongodb-operator
+    tag: "1.19.1-dremio-20250319164744-5670cbfe"
   imagePullSecrets:
     - name: i-bouabdallaoui-dataplatform-pull-secret
   replicas: 0
 engineOperator:
+  enabled: false
+  image:
+    repository: quay.io/dremio/dremio-mongodb-operator
+    tag: "1.19.1-dremio-20250319164744-5670cbfe"
   imagePullSecrets:
     - name: i-bouabdallaoui-dataplatform-pull-secret
   replicas: 0
 nats:
+  enabled: false
   imagePullSecrets:
     - name: i-bouabdallaoui-dataplatform-pull-secret
   replicas: 0
