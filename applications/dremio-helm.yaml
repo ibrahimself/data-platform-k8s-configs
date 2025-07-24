@@ -9,25 +9,19 @@ spec:
   project: default
   
   source:
-    # Using OCI registry for Dremio Enterprise Helm chart
-    repoURL: quay.io
-    chart: dremio/dremio-helm
-    targetRevision: "3.0.1"
+    # Using GitHub repository instead of OCI registry to avoid auth issues
+    repoURL: https://github.com/dremio/dremio-cloud-tools.git
+    path: charts/dremio_v2
+    targetRevision: master
     helm:
       values: |
-        # Dremio Enterprise configuration
-        dremio:
-          # Your Enterprise License
-          license: "eyJraWQiOiI4MGZhMjgxYzZhZjczNDNkNTE1YTVhMzg1MDg1N2RhNmE2YmEzMTU3NWE5ZjVlZmVhMmQ4MTkyMGUyM2Q2OGY0IiwiYWxnIjoiRVMyNTYifQ.eyJpc3MiOiJEcmVtaW8iLCJzdWIiOiIwMDM1ZDAwMDA3TFRkT0VBQTEiLCJuYmYiOjE3NTI3ODA0NzYsImV4cCI6MTc1NTU0NTI3NiwiaWF0IjoxNzUyNzgwNDc2LCJqdGkiOiIxNzUyNzgwNDc2MDYyVzJjciJ9.u8bxfpQvyieeGn3H8RNIyKqbIgHR4pYO0mfBDBh23WJJw58t2WsDEhbOL6rUdfyGu4hItUtcohCoSEXMaAAolg"
-          
-          # Tag for Dremio Enterprise Edition
-          tag: "26.0.1"
+        # Dremio Enterprise Edition configuration
         
-        # Image configuration for Enterprise Edition
+        # Image configuration - Enterprise Edition from quay.io
         image: quay.io/dremio/dremio-ee
         imageTag: "26.0.1"
         
-        # Image pull secret - REQUIRED for quay.io
+        # Image pull secret for Docker images
         imagePullSecrets:
           - i-bouabdallaoui-dataplatform-pull-secret
         
@@ -35,10 +29,10 @@ spec:
         service:
           type: LoadBalancer
         
-        # Coordinator configuration (for r5.xlarge nodes)
+        # Coordinator configuration (for r5.xlarge: 4 vCPU, 32GB RAM)
         coordinator:
-          cpu: 3       # r5.xlarge has 4 vCPUs
-          memory: 24576 # 24Gi in MB (leaving room for OS)
+          cpu: 3
+          memory: 24576  # 24Gi in MB
           count: 1
           volumeSize: 50Gi
           
@@ -53,11 +47,11 @@ spec:
           flight:
             port: 32010
         
-        # Executor configuration (for m5.2xlarge nodes)
+        # Executor configuration (for m5.2xlarge: 8 vCPU, 32GB RAM)
         executor:
-          cpu: 6        # m5.2xlarge has 8 vCPUs
-          memory: 24576 # 24Gi in MB
-          count: 3      # Start with 3, can scale to 5
+          cpu: 6
+          memory: 24576  # 24Gi in MB
+          count: 3
           volumeSize: 50Gi
           
           cloudCache:
@@ -74,7 +68,7 @@ spec:
           count: 3
           volumeSize: 10Gi
         
-        # Distributed Storage - MinIO (already installed)
+        # Distributed Storage - MinIO
         distStorage:
           type: "aws"
           aws:
@@ -98,21 +92,24 @@ spec:
                 <value>false</value>
               </property>
         
-        # Extra startup parameters for Prometheus monitoring
+        # Extra startup parameters for monitoring
         extraStartParams: >-
           -Dservices.web-admin.enabled=true
           -Dservices.web-admin.host=0.0.0.0
           -Dservices.web-admin.port=9090
           -Djava.jmx.enabled=true
           -Djava.jmx.port=9099
-          -Dquery.planning.max-millis=30000
-          -Dquery.metadata.max-millis=60000
         
-        # Pod annotations for Prometheus scraping
+        # Pod annotations for Prometheus
         podAnnotations:
           prometheus.io/scrape: "true"
           prometheus.io/port: "9090"
           prometheus.io/path: "/metrics"
+        
+        # Extra environment variables for license
+        extraEnvVars:
+          - name: DREMIO_ENTERPRISE_LICENSE
+            value: "eyJraWQiOiI4MGZhMjgxYzZhZjczNDNkNTE1YTVhMzg1MDg1N2RhNmE2YmEzMTU3NWE5ZjVlZmVhMmQ4MTkyMGUyM2Q2OGY0IiwiYWxnIjoiRVMyNTYifQ.eyJpc3MiOiJEcmVtaW8iLCJzdWIiOiIwMDM1ZDAwMDA3TFRkT0VBQTEiLCJuYmYiOjE3NTI3ODA0NzYsImV4cCI6MTc1NTU0NTI3NiwiaWF0IjoxNzUyNzgwNDc2LCJqdGkiOiIxNzUyNzgwNDc2MDYyVzJjciJ9.u8bxfpQvyieeGn3H8RNIyKqbIgHR4pYO0mfBDBh23WJJw58t2WsDEhbOL6rUdfyGu4hItUtcohCoSEXMaAAolg"
   
   destination:
     server: https://kubernetes.default.svc
