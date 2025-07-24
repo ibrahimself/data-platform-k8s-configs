@@ -1,4 +1,15 @@
 # Dremio Helm Chart Override Values
+# --- Kubernetes Image Pull Secret ---
+# Secret required to pull the enterprise image from quay.io
+  
+global:
+  imagePullSecrets:
+    - i-bouabdallaoui-dataplatform-pull-secret
+
+imagePullSecrets:
+  - i-bouabdallaoui-dataplatform-pull-secret
+
+# --- Service Configuration ---
 
 # --- License and Image Configuration ---
 dremio:
@@ -7,12 +18,6 @@ dremio:
     repository: quay.io/dremio/dremio-enterprise
     tag: "26.0.1"
 
-# --- Kubernetes Image Pull Secret ---
-# Secret required to pull the enterprise image from quay.io
-imagePullSecrets:
-  - i-bouabdallaoui-dataplatform-pull-secret
-
-# --- Service Configuration ---
 service:
   type: ClusterIP
 
