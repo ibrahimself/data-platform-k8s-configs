@@ -20,10 +20,10 @@ prometheusOperator:
       resources:
         requests:
           cpu: 50m
-          memory: 50Mi
+          memory: 64Mi
         limits:
           cpu: 100m
-          memory: 100Mi
+          memory: 128Mi
   tls:
     enabled: true
   resources:
@@ -42,7 +42,7 @@ prometheus:
     # Use http scheme for external URL
     externalUrl: http://localhost/prometheus
     routePrefix: /prometheus
-    retention: 7d
+    retention: 3d
     
     # Enable cross-namespace monitoring
     serviceMonitorSelectorNilUsesHelmValues: false
@@ -59,11 +59,11 @@ prometheus:
     
     resources:
       requests:
-        cpu: 500m       
-        memory: 1Gi   
+        cpu: 250m       
+        memory: 512Mi   
       limits:
-        cpu: 1000m
-        memory: 2Gi
+        cpu: 500m
+        memory: 1Gi
     storageSpec:
       volumeClaimTemplate:
         spec:
@@ -71,7 +71,7 @@ prometheus:
           accessModes: ["ReadWriteOnce"]
           resources:
             requests:
-              storage: 50Gi
+              storage: 20Gi
 
 # Grafana
 grafana:
@@ -80,8 +80,8 @@ grafana:
   replicas: 1
   resources:
     requests:
-      cpu: 100m
-      memory: 128Mi
+      cpu: 50m
+      memory: 64Mi
     limits:
       cpu: 200m
       memory: 256Mi
@@ -97,8 +97,8 @@ grafana:
           cpu: 50m
           memory: 64Mi
         limits:
-          cpu: 100m
-          memory: 128Mi
+          cpu: 50m
+          memory: 64Mi
     datasources:
       enabled: true
       resources:
@@ -124,11 +124,11 @@ alertmanager:
     routePrefix: /alertmanager
     resources:
       requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
         cpu: 100m
         memory: 128Mi
-      limits:
-        cpu: 200m
-        memory: 256Mi
     storage:
       volumeClaimTemplate:
         spec:
@@ -143,22 +143,22 @@ nodeExporter:
   enabled: true
   resources:
     requests:
+      cpu: 25m
+      memory: 16Mi
+    limits:
       cpu: 50m
       memory: 32Mi
-    limits:
-      cpu: 100m
-      memory: 64Mi
 
 # Kube State Metrics
 kubeStateMetrics:
   enabled: true
   resources:
     requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
       cpu: 50m
       memory: 64Mi
-    limits:
-      cpu: 100m
-      memory: 128Mi
 
 # Disable non-essential components
 kubeApiServer:
