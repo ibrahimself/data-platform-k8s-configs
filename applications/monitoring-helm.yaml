@@ -1,3 +1,5 @@
+# Option 1: Update ArgoCD Application to Respect Existing PVCs
+# applications/monitoring-helm.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -8,11 +10,9 @@ metadata:
 spec:
   project: data-platform
   sources:
-    # Source 1: Git repo for values file
     - repoURL: git@github.com:ibrahimself/data-platform-k8s-configs.git
       targetRevision: HEAD
       ref: values
-    # Source 2: Helm chart from Prometheus Community
     - repoURL: https://prometheus-community.github.io/helm-charts
       chart: kube-prometheus-stack
       targetRevision: 56.6.2
@@ -30,15 +30,37 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
-      - Replace=true
-      - SkipDryRunOnMissingResource=true 
+      # REMOVE Replace=true for PVCs
+      - RespectIgnoreDifferences=true  # ADD THIS
+      - SkipDryRunOnMissingResource=true
     retry:
       limit: 5
       backoff:
         duration: 5s
         factor: 2
         maxDuration: 3m
-  # Sync wave to ensure namespace exists first
-  info:
-    - name: 'sync-wave'
-      value: '10'
+  # ADD: Ignore PVC differences
+  ignoreDifferences:
+    # Ignore PVC spec changes
+    - group: ""
+      kind: PersistentVolumeClaim
+      name: prometheus-stack-grafana
+      jsonPointers:
+        - /spec
+    - group: ""
+      kind: PersistentVolumeClaim
+      name: prometheus-prometheus-stack-kube-prom-prometheus-db-prometheus-prometheus-stack-kube-prom-prometheus-0
+      jsonPointers:
+        - /spec
+    - group: ""
+      kind: PersistentVolumeClaim
+      name: alertmanager-prometheus-stack-kube-prom-alertmanager-db-alertmanager-prometheus-stack-kube-prom-alertmanager-0
+      jsonPointers:
+        - /spec
+    # Also ignore webhook resources
+    - group: batch
+      kind: Job
+      name: prometheus-stack-kube-prom-admission-create
+    - group: batch
+      kind: Job
+      name: prometheus-stack-kube-prom-admission-patch
