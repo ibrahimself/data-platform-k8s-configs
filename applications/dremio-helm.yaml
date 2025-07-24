@@ -13,7 +13,7 @@ spec:
     path: resources/dremio
     helm:
       valueFiles:
-        - values_overrides.yaml
+        - values_override.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: dremio
