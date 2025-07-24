@@ -1,0 +1,103 @@
+# Dremio Helm Chart Override Values
+
+# --- License and Image Configuration ---
+dremio:
+  license: "eyJraWQiOiI4MGZhMjgxYzZhZjczNDNkNTE1YTVhMzg1MDg1N2RhNmE2YmEzMTU3NWE5ZjVlZmVhMmQ4MTkyMGUyM2Q2OGY0IiwiYWxnIjoiRVMyNTYifQ.eyJpc3MiOiJEcmVtaW8iLCJzdWIiOiIwMDM1ZDAwMDA3TFRkT0VBQTEiLCJuYmYiOjE3NTI3ODA0NzYsImV4cCI6MTc1NTU0NTI3NiwiaWF0IjoxNzUyNzgwNDc2LCJqdGkiOiIxNzUyNzgwNDc2MDYyVzJjciJ9.u8bxfpQvyieeGn3H8RNIyKqbIgHR4pYO0mfBDBh23WJJw58t2WsDEhbOL6rUdfyGu4hItUtcohCoSEXMaAAolg"
+  image:
+    repository: quay.io/dremio/dremio-enterprise
+    tag: "26.0.1"
+
+# --- Kubernetes Image Pull Secret ---
+# Secret required to pull the enterprise image from quay.io
+imagePullSecrets:
+  - dremio-quay-secret
+
+# --- Service Configuration ---
+service:
+  type: ClusterIP
+
+# --- Core Component Configuration ---
+coordinator:
+  count: 0 # Note: A Dremio cluster typically requires at least one coordinator.
+  volumeSize: "20Gi"
+  resources:
+    requests:
+      cpu: "2"
+      memory: "8Gi"
+    limits:
+      cpu: "2"
+      memory: "8Gi"
+
+executor:
+  count: 1
+  volumeSize: "20Gi"
+  engines: ["default"]
+  resources:
+    requests:
+      cpu: "2"
+      memory: "8Gi"
+    limits:
+      cpu: "2"
+      memory: "8Gi"
+
+zookeeper:
+  count: 1
+  volumeSize: "10Gi"
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "500m"
+      memory: "1Gi"
+
+# --- Distributed Storage (MinIO) ---
+# Configuration to use a MinIO instance as the distributed store
+distStorage:
+  type: "aws"
+  aws:
+    bucketName: "dremio-dist-storage"
+    path: "/"
+    authentication: "accessKeySecret"
+    credentials:
+      accessKey: "minioadmin"
+      secret: "minioadmin123"
+    extraProperties: |
+      <property>
+        <n>fs.s3a.endpoint</n>
+        <value>http://minio.minio.svc.cluster.local:9000</value>
+      </property>
+      <property>
+        <n>fs.s3a.path.style.access</n>
+        <value>true</value>
+      </property>
+      <property>
+        <n>dremio.s3.compat</n>
+        <value>true</value>
+      </property>
+      <property>
+        <n>fs.s3a.connection.ssl.enabled</n>
+        <value>false</value>
+      </property>
+
+telemetry:
+  enabled: false
+
+opensearch:
+  enabled: false
+  replicas: 0
+
+catalog:
+  replicas: 0
+catalogservices:
+  replicas: 0
+catalogServiceServer:
+  replicas: 0
+mongodb:
+  replicas: 0
+mongodbOperator:
+  replicas: 0
+engineOperator:
+  replicas: 0
+nats:
+  replicas: 0
