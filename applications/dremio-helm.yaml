@@ -8,8 +8,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: oci://quay.io/dremio
-    chart: dremio-helm
+    repoURL: oci://quay.io
+    chart: dremio/dremio-helm
     targetRevision: 3.0.1
     helm:
       values: |
