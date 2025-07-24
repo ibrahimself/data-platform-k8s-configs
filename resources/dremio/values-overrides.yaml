@@ -17,6 +17,8 @@ dremio:
   image:
     repository: quay.io/dremio/dremio-enterprise
     tag: "26.0.1"
+  imagePullSecrets:
+  - i-bouabdallaoui-dataplatform-pull-secret
 
 service:
   type: ClusterIP
@@ -95,32 +97,27 @@ opensearch:
 catalog:
   enabled: false
   replicas: 0
+
 catalogservices:
   enabled: false
   replicas: 0
+
 catalogServiceServer:
   enabled: false
   replicas: 0
+
 mongodb:
   enabled: false
   replicas: 0
+
 mongodbOperator:
-  image:
-    repository: quay.io/dremio/dremio-mongodb-operator
-    tag: "1.19.1-dremio-20250319164744-5670cbfe"
-  imagePullSecrets:
-    - name: i-bouabdallaoui-dataplatform-pull-secret
+  enabled: false
   replicas: 0
+
 engineOperator:
   enabled: false
-  image:
-    repository: quay.io/dremio/dremio-mongodb-operator
-    tag: "1.19.1-dremio-20250319164744-5670cbfe"
-  imagePullSecrets:
-    - name: i-bouabdallaoui-dataplatform-pull-secret
   replicas: 0
+
 nats:
   enabled: false
-  imagePullSecrets:
-    - name: i-bouabdallaoui-dataplatform-pull-secret
   replicas: 0
