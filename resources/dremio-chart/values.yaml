@@ -52,7 +52,7 @@ dremio-helm:
     volumeSize: "10Gi"
     count: 1
 
-  # MinIO Storage
+  # MinIO Storage - CRITICAL: This must be under dremio-helm
   distStorage:
     type: "aws"
     aws:
@@ -80,7 +80,18 @@ dremio-helm:
           <value>false</value>
         </property>
 
-  # EXPLICITLY set replicas to 0 for unwanted components
+  # Engine Operator - Fix resource mismatch
+  engineOperator:
+    replicas: 0
+    resources:
+      requests:
+        cpu: "250m"
+        memory: "512Mi"
+      limits:
+        cpu: "500m"
+        memory: "1Gi"
+
+  # Other components set to 0
   catalog:
     replicas: 0
 
@@ -94,9 +105,6 @@ dremio-helm:
     replicas: 0
 
   mongodbOperator:
-    replicas: 0
-
-  engineOperator:
     replicas: 0
 
   opensearch:
