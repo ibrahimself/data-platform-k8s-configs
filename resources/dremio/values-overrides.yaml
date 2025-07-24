@@ -99,10 +99,18 @@ catalogservices:
 catalogServiceServer:
   replicas: 0
 mongodb:
+  imagePullSecrets:
+    - name: i-bouabdallaoui-dataplatform-pull-secret
   replicas: 0
 mongodbOperator:
+  imagePullSecrets:
+    - name: i-bouabdallaoui-dataplatform-pull-secret
   replicas: 0
 engineOperator:
+  imagePullSecrets:
+    - name: i-bouabdallaoui-dataplatform-pull-secret
   replicas: 0
 nats:
+  imagePullSecrets:
+    - name: i-bouabdallaoui-dataplatform-pull-secret
   replicas: 0
