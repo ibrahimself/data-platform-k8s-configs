@@ -10,7 +10,7 @@ dremio:
 # --- Kubernetes Image Pull Secret ---
 # Secret required to pull the enterprise image from quay.io
 imagePullSecrets:
-  - dremio-quay-secret
+  - i-bouabdallaoui-dataplatform-pull-secret
 
 # --- Service Configuration ---
 service:
