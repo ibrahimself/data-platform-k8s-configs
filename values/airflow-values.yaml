@@ -37,14 +37,35 @@ webserver:
   replicas: 1
   defaultUser:
     enabled: false
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
 
 # Scheduler configuration
 scheduler:
   replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
 
 # Disable Triggerer temporarily to simplify deployment
 triggerer:
   enabled: false
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
 
 # Disable components not needed for KubernetesExecutor
 redis:
