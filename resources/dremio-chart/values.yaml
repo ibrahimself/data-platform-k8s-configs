@@ -1,5 +1,5 @@
-# Dremio Helm Chart Values - Minimal Configuration for Testing
-# This configuration uses minimal resources suitable for development/testing
+# Fixed Dremio Values for Direct Helm Chart
+# This properly disables MongoDB and other optional components
 
 # License and image
 dremio:
@@ -12,36 +12,40 @@ dremio:
 imagePullSecrets:
   - dremio-quay-secret
 
-# Minimal Coordinator (Master only)
+# Coordinator - with reduced resources
 coordinator:
-  master:
-    resources:
-      requests:
-        cpu: "2"         # Minimum viable
-        memory: "8Gi"    # Minimum for stable operation
-      limits:
-        cpu: "2"
-        memory: "8Gi"
-    volumeSize: "50Gi"   # Smaller volume for testing
-    count: 1
-  
-  # No secondary coordinators in minimal setup
-  count: 0
-
-# Minimal Executor
-executor:
   resources:
     requests:
-      cpu: "2"           # Minimum viable
-      memory: "8Gi"      # Minimum for basic queries
+      cpu: "2"
+      memory: "8Gi"
     limits:
       cpu: "2"
       memory: "8Gi"
-  count: 1               # Single executor for testing
-  volumeSize: "50Gi"     # Smaller spill volume
+  volumeSize: "50Gi"
+  count: 0  # Secondary coordinators
+  master:
+    resources:
+      requests:
+        cpu: "2"
+        memory: "8Gi"
+      limits:
+        cpu: "2"
+        memory: "8Gi"
+    volumeSize: "50Gi"
+    count: 1  # Always 1 master
+
+# Executor - with reduced resources
+executor:
+  resources:
+    requests:
+      cpu: "2"
+      memory: "8Gi"
+    limits:
+      cpu: "2"
+      memory: "8Gi"
+  count: 1
+  volumeSize: "50Gi"
   engines: ["default"]
-  
-  # No cloud cache in minimal setup
   cloudCache:
     enabled: false
 
@@ -49,17 +53,17 @@ executor:
 service:
   type: ClusterIP
 
-# Minimal Zookeeper
+# Zookeeper - with reduced resources
 zookeeper:
   resources:
     requests:
-      cpu: "0.5"         # Very light
-      memory: "1Gi"      
+      cpu: "0.5"
+      memory: "1Gi"
     limits:
       cpu: "0.5"
       memory: "1Gi"
   volumeSize: "10Gi"
-  count: 1               # Single node for testing
+  count: 1
 
 # MinIO Storage
 distStorage:
@@ -89,32 +93,28 @@ distStorage:
         <value>false</value>
       </property>
 
-engineOperator:
-  enabled: false
-  replicas: 0
-
-catalog:
-  enabled: false
-  replicas: 0
-
-catalogservices:
-  enabled: false
-  replicas: 0
-
+# IMPORTANT: Properly disable MongoDB and other optional components
+# These components are part of the new catalog architecture
 mongodb:
   enabled: false
-  replicas: 0
 
 mongodbOperator:
   enabled: false
-  replicas: 0
+
+catalog:
+  enabled: false
+
+catalogservices:
+  enabled: false
 
 opensearch:
   enabled: false
 
 nats:
   enabled: false
-  replicas: 0
+
+engineOperator:
+  enabled: false
 
 telemetry:
   enabled: false
