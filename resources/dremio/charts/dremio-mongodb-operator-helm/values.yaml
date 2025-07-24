@@ -5,7 +5,7 @@
 replicaCount: 1
 
 image:
-  repository: quay.io/dremio/dremio-mongodb-operator
+  repository: quay.io/dremio/dremio-mongodb-operator-helm
   tag: 1.19.1-dremio-20250319163742-5670cbfe
   pullPolicy: IfNotPresent
 
