@@ -1,108 +1,110 @@
-# License and image
-dremio:
-  license: "eyJraWQiOiI4MGZhMjgxYzZhZjczNDNkNTE1YTVhMzg1MDg1N2RhNmE2YmEzMTU3NWE5ZjVlZmVhMmQ4MTkyMGUyM2Q2OGY0IiwiYWxnIjoiRVMyNTYifQ.eyJpc3MiOiJEcmVtaW8iLCJzdWIiOiIwMDM1ZDAwMDA3TFRkT0VBQTEiLCJuYmYiOjE3NTI3ODA0NzYsImV4cCI6MTc1NTU0NTI3NiwiaWF0IjoxNzUyNzgwNDc2LCJqdGkiOiIxNzUyNzgwNDc2MDYyVzJjciJ9.u8bxfpQvyieeGn3H8RNIyKqbIgHR4pYO0mfBDBh23WJJw58t2WsDEhbOL6rUdfyGu4hItUtcohCoSEXMaAAolg"
-  
-  image:
-    repository: quay.io/dremio/dremio-enterprise
-    tag: 26.0.0
+# Values for the dremio-helm subchart
+dremio-helm:
+  # License and image
+  dremio:
+    license: "eyJraWQiOiI4MGZhMjgxYzZhZjczNDNkNTE1YTVhMzg1MDg1N2RhNmE2YmEzMTU3NWE5ZjVlZmVhMmQ4MTkyMGUyM2Q2OGY0IiwiYWxnIjoiRVMyNTYifQ.eyJpc3MiOiJEcmVtaW8iLCJzdWIiOiIwMDM1ZDAwMDA3TFRkT0VBQTEiLCJuYmYiOjE3NTI3ODA0NzYsImV4cCI6MTc1NTU0NTI3NiwiaWF0IjoxNzUyNzgwNDc2LCJqdGkiOiIxNzUyNzgwNDc2MDYyVzJjciJ9.u8bxfpQvyieeGn3H8RNIyKqbIgHR4pYO0mfBDBh23WJJw58t2WsDEhbOL6rUdfyGu4hItUtcohCoSEXMaAAolg"
+    
+    image:
+      repository: quay.io/dremio/dremio-enterprise
+      tag: 26.0.0
 
-imagePullSecrets:
-  - dremio-quay-secret
+  imagePullSecrets:
+    - dremio-quay-secret
 
-# Coordinator
-coordinator:
-  resources:
-    requests:
-      cpu: "2"
-      memory: "8Gi"
-    limits:
-      cpu: "2"
-      memory: "8Gi"
-  volumeSize: "20Gi"
-  count: 0
+  # Coordinator
+  coordinator:
+    resources:
+      requests:
+        cpu: "2"
+        memory: "8Gi"
+      limits:
+        cpu: "2"
+        memory: "8Gi"
+    volumeSize: "20Gi"
+    count: 0
 
-# Executor - REQUIRED
-executor:
-  resources:
-    requests:
-      cpu: "2"
-      memory: "8Gi"
-    limits:
-      cpu: "2"
-      memory: "8Gi"
-  count: 1
-  volumeSize: 20Gi
-  engines: ["default"]
+  # Executor - REQUIRED
+  executor:
+    resources:
+      requests:
+        cpu: "2"
+        memory: "8Gi"
+      limits:
+        cpu: "2"
+        memory: "8Gi"
+    count: 1
+    volumeSize: 20Gi
+    engines: ["default"]
 
-# Service
-service:
-  type: ClusterIP
+  # Service
+  service:
+    type: ClusterIP
 
-# Zookeeper
-zookeeper:
-  resources:
-    requests:
-      cpu: "500m"
-      memory: "1Gi"
-    limits:
-      cpu: "500m"
-      memory: "1Gi"
-  volumeSize: "10Gi"
-  count: 1
+  # Zookeeper
+  zookeeper:
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "1Gi"
+      limits:
+        cpu: "500m"
+        memory: "1Gi"
+    volumeSize: "10Gi"
+    count: 1
 
-# MinIO Storage
-distStorage:
-  type: "aws"
-  aws:
-    bucketName: "dremio-dist-storage"
-    path: "/"
-    authentication: "accessKeySecret"
-    credentials:
-      accessKey: "minioadmin"
-      secret: "minioadmin123"
-    extraProperties: |
-      <property>
-        <n>fs.s3a.endpoint</n>
-        <value>http://minio.minio.svc.cluster.local:9000</value>
-      </property>
-      <property>
-        <n>fs.s3a.path.style.access</n>
-        <value>true</value>
-      </property>
-      <property>
-        <n>dremio.s3.compat</n>
-        <value>true</value>
-      </property>
-      <property>
-        <n>fs.s3a.connection.ssl.enabled</n>
-        <value>false</value>
-      </property>
+  # MinIO Storage
+  distStorage:
+    type: "aws"
+    aws:
+      bucketName: "dremio-dist-storage"
+      path: "/"
+      authentication: "accessKeySecret"
+      credentials:
+        accessKey: "minioadmin"
+        secret: "minioadmin123"
+      extraProperties: |
+        <property>
+          <n>fs.s3a.endpoint</n>
+          <value>http://minio.minio.svc.cluster.local:9000</value>
+        </property>
+        <property>
+          <n>fs.s3a.path.style.access</n>
+          <value>true</value>
+        </property>
+        <property>
+          <n>dremio.s3.compat</n>
+          <value>true</value>
+        </property>
+        <property>
+          <n>fs.s3a.connection.ssl.enabled</n>
+          <value>false</value>
+        </property>
 
-# EXPLICITLY set replicas to 0 for unwanted components
-catalog:
-  replicas: 0
+  # EXPLICITLY set replicas to 0 for unwanted components
+  catalog:
+    replicas: 0
 
-catalogservices:
-  replicas: 0
+  catalogservices:
+    replicas: 0
 
-catalogServiceServer:
-  replicas: 0
+  catalogServiceServer:
+    replicas: 0
 
-mongodb:
-  replicas: 0
+  mongodb:
+    replicas: 0
 
-mongodbOperator:
-  replicas: 0
+  mongodbOperator:
+    replicas: 0
 
-engineOperator:
-  replicas: 0
+  engineOperator:
+    replicas: 0
 
-opensearch:
-  enabled: false
-  replicas: 0
+  opensearch:
+    enabled: false
+    replicas: 0
 
-nats:
-  replicas: 0
+  nats:
+    replicas: 0
 
-telemetry:
-  enabled: false
+  telemetry:
+    enabled: false
