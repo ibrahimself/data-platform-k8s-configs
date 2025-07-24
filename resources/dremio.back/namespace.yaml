@@ -1,8 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: dremio
-  labels:
-    name: dremio
-    app.kubernetes.io/part-of: data-platform
-    app.kubernetes.io/managed-by: argocd

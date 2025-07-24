@@ -1,9 +1,0 @@
-apiVersion: v2
-name: dremio-wrapper
-description: A Helm chart wrapper for Dremio
-type: application
-version: 1.0.0
-dependencies:
-  - name: dremio-helm
-    version: 3.0.1
-    repository: oci://quay.io/dremio

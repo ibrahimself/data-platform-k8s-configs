@@ -7,136 +7,169 @@ metadata:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
+  
   source:
-    repoURL: oci://quay.io
-    chart: dremio/dremio-helm
-    targetRevision: 3.0.1
+    repoURL: https://github.com/dremio/dremio-cloud-tools.git
+    path: charts/dremio_v2
+    targetRevision: master
     helm:
       values: |
-        # License and image
+        # Dremio Enterprise Configuration
         dremio:
+          # Your trial image pull credentials
+          trialImagePullCredentials: "ewogICJhdXRocyI6IHsKICAgICJxdWF5LmlvIjogewogICAgICAiYXV0aCI6ICJaSEpsYldsdkszUnlhV0ZzWDJGalkyVnpjMTh3TjE4eE4xOHlNREkxT2s4d1dFYzRUbGhaTkZjeFFsZE9RMEk1T1VGUk1FdGFPRFpCVTB3MFFWZFdSRUl3UVVKQlRVUklSRVJZVkZwUFFqSktOVkJHVUVoSVdVWkJXVUZYUmtVPSIsCiAgICAgICJlbWFpbCI6ICIiCiAgICB9CiAgfQp9"
+          
+          # Your Dremio Enterprise License
           license: "eyJraWQiOiI4MGZhMjgxYzZhZjczNDNkNTE1YTVhMzg1MDg1N2RhNmE2YmEzMTU3NWE5ZjVlZmVhMmQ4MTkyMGUyM2Q2OGY0IiwiYWxnIjoiRVMyNTYifQ.eyJpc3MiOiJEcmVtaW8iLCJzdWIiOiIwMDM1ZDAwMDA3TFRkT0VBQTEiLCJuYmYiOjE3NTI3ODA0NzYsImV4cCI6MTc1NTU0NTI3NiwiaWF0IjoxNzUyNzgwNDc2LCJqdGkiOiIxNzUyNzgwNDc2MDYyVzJjciJ9.u8bxfpQvyieeGn3H8RNIyKqbIgHR4pYO0mfBDBh23WJJw58t2WsDEhbOL6rUdfyGu4hItUtcohCoSEXMaAAolg"
           
+          # Dremio Enterprise image from quay.io
           image:
             repository: quay.io/dremio/dremio-enterprise
-            tag: 26.0.1
-
+            tag: latest
+          
+          # Extra configuration for Prometheus monitoring
+          dremioConfExtraOptions:
+            # Enable Prometheus metrics
+            "services.web-admin.enabled": true
+            "services.web-admin.host": "0.0.0.0"
+            "services.web-admin.port": 9090
+            # Enable JMX
+            "java.jmx.enabled": true
+            "java.jmx.port": 9099
+            # Query settings
+            "query.planning.max-millis": 30000
+            "query.metadata.max-millis": 60000
+            # Debug settings
+            "debug.enabled": true
+            "debug.memory.heap-monitoring.enabled": true
+        
+        # Image pull secret reference
         imagePullSecrets:
-          - dremio-quay-secret
-
-        # Basic configuration with reasonable resources
-        coordinator:
-          master:
-            resources:
-              requests:
-                cpu: "4"
-                memory: "16Gi"
-              limits:
-                cpu: "4"
-                memory: "16Gi"
-            volumeSize: "100Gi"
-            count: 1
-          count: 0
-
-        executor:
-          resources:
-            requests:
-              cpu: "4"
-              memory: "16Gi"
-            limits:
-              cpu: "4"
-              memory: "16Gi"
-          count: 2
-          volumeSize: "64Gi"
-          engines: ["default"]
-          cloudCache:
-            enabled: false
-
+          - i-bouabdallaoui-dataplatform-pull-secret
+        
+        # Service configuration
         service:
-          type: ClusterIP
-
-        zookeeper:
+          type: LoadBalancer
+          # Uncomment below for internal load balancer
+          # annotations:
+          #   service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+        
+        # Coordinator configuration (matching your values-override.yaml)
+        coordinator:
+          count: 1
           resources:
             requests:
-              cpu: "1"
-              memory: "2Gi"
+              cpu: "32"
+              memory: "64Gi"
             limits:
-              cpu: "1"
-              memory: "2Gi"
-          volumeSize: "10Gi"
-          count: 1
-
-        # MinIO Storage
+              memory: "64Gi"
+          web:
+            auth:
+              enabled: true
+              type: "internal"
+            port: 9047
+          client:
+            port: 31010
+          flight:
+            port: 32010
+          volumeSize: 100Gi
+        
+        # Executor configuration
+        executor:
+          count: 3
+          resources:
+            requests:
+              cpu: "16"
+              memory: "32Gi"
+            limits:
+              memory: "32Gi"
+          volumeSize: 100Gi
+          cloudCache:
+            enabled: true
+            quota:
+              fs_pct: 100
+              db_pct: 100
+              cache_pct: 100
+        
+        # Zookeeper configuration
+        zookeeper:
+          memory: 1024
+          cpu: 0.5
+          count: 3
+          volumeSize: 10Gi
+        
+        # Distributed Storage - CHOOSE ONE OPTION BELOW
+        
+        # Option 1: MinIO (S3-compatible) - DEFAULT FOR TESTING
         distStorage:
           type: "aws"
           aws:
-            bucketName: "dremio-dist-storage"
+            bucketName: "dremio"
             path: "/"
             authentication: "accessKeySecret"
             credentials:
               accessKey: "minioadmin"
-              secret: "minioadmin123"
+              secret: "minioadmin"
             extraProperties: |
               <property>
                 <n>fs.s3a.endpoint</n>
-                <value>http://minio.minio.svc.cluster.local:9000</value>
+                <value>minio.minio.svc.cluster.local:9000</value>
               </property>
               <property>
                 <n>fs.s3a.path.style.access</n>
                 <value>true</value>
               </property>
               <property>
-                <n>dremio.s3.compat</n>
-                <value>true</value>
-              </property>
-              <property>
                 <n>fs.s3a.connection.ssl.enabled</n>
                 <value>false</value>
               </property>
-
-        # Disable optional components
-        engineOperator:
-          enabled: false
-          replicas: 0
-
-        catalog:
-          enabled: false
-          replicas: 0
-
-        catalogservices:
-          enabled: false
-          replicas: 0
-
-        mongodb:
-          enabled: false
-          replicas: 0
-
-        mongodbOperator:
-          enabled: false
-          replicas: 0
-
-        opensearch:
-          enabled: false
-
-        nats:
-          enabled: false
-          replicas: 0
-
-        telemetry:
-          enabled: false
-
+        
+        # Option 2: AWS S3 - UNCOMMENT AND UPDATE IF USING S3
+        # distStorage:
+        #   type: "aws"
+        #   aws:
+        #     bucketName: "your-s3-bucket-name"
+        #     path: "/"
+        #     authentication: "accessKeySecret"
+        #     credentials:
+        #       accessKey: "YOUR_AWS_ACCESS_KEY"
+        #       secret: "YOUR_AWS_SECRET_KEY"
+        
+        # Option 3: Azure Storage - UNCOMMENT AND UPDATE IF USING AZURE
+        # distStorage:
+        #   type: "azureStorage"
+        #   azureStorage:
+        #     accountName: "yourstorageaccount"
+        #     authentication: "accessKey"
+        #     filesystem: "dremio-container"
+        #     path: "/"
+        #     credentials:
+        #       accessKey: "YOUR_AZURE_ACCESS_KEY"
+        
+        # Pod annotations for Prometheus
+        podAnnotations:
+          prometheus.io/scrape: "true"
+          prometheus.io/port: "9090"
+          prometheus.io/path: "/metrics"
+  
   destination:
     server: https://kubernetes.default.svc
     namespace: dremio
+  
   syncPolicy:
     automated:
       prune: true
-      selfHeal: false
+      selfHeal: true
+      allowEmpty: false
     syncOptions:
       - CreateNamespace=true
-      - ServerSideApply=true
-  ignoreDifferences:
-  - group: apps
-    kind: StatefulSet
-    jsonPointers:
-    - /spec/volumeClaimTemplates
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  
+  revisionHistoryLimit: 10
