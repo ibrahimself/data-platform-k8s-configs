@@ -1,0 +1,146 @@
+# Dremio Helm Values with Prometheus Monitoring
+# This configuration:
+# - Uses minimal resources
+# - Enables Prometheus metrics on port 9010
+# - Disables all optional components
+
+dremio:
+  license: "eyJraWQiOiI4MGZhMjgxYzZhZjczNDNkNTE1YTVhMzg1MDg1N2RhNmE2YmEzMTU3NWE5ZjVlZmVhMmQ4MTkyMGUyM2Q2OGY0IiwiYWxnIjoiRVMyNTYifQ.eyJpc3MiOiJEcmVtaW8iLCJzdWIiOiIwMDM1ZDAwMDA3TFRkT0VBQTEiLCJuYmYiOjE3NTI3ODA0NzYsImV4cCI6MTc1NTU0NTI3NiwiaWF0IjoxNzUyNzgwNDc2LCJqdGkiOiIxNzUyNzgwNDc2MDYyVzJjciJ9.u8bxfpQvyieeGn3H8RNIyKqbIgHR4pYO0mfBDBh23WJJw58t2WsDEhbOL6rUdfyGu4hItUtcohCoSEXMaAAolg"
+  
+  image:
+    repository: quay.io/dremio/dremio-enterprise
+    tag: 26.0.0
+  
+  # Enable Prometheus metrics
+  extraStartParams: >-
+    -Dservices.web-admin.port=9010
+    -Dservices.web-admin.enabled=true
+    -Dservices.web-admin.host=0.0.0.0
+
+imagePullSecrets:
+  - dremio-quay-secret
+
+# Coordinator with Prometheus metrics
+coordinator:
+  master:
+    resources:
+      requests:
+        cpu: "2"
+        memory: "8Gi"
+      limits:
+        cpu: "2"
+        memory: "8Gi"
+    volumeSize: "50Gi"
+    count: 1
+    # Enable metrics port
+    extraStartParams: >-
+      -Dservices.web-admin.port=9010
+      -Dservices.web-admin.enabled=true
+      -Dservices.web-admin.host=0.0.0.0
+  count: 0
+
+# Executor with Prometheus metrics
+executor:
+  resources:
+    requests:
+      cpu: "2"
+      memory: "8Gi"
+    limits:
+      cpu: "2"
+      memory: "8Gi"
+  count: 1
+  volumeSize: "50Gi"
+  engines: ["default"]
+  cloudCache:
+    enabled: false
+  # Enable metrics port
+  extraStartParams: >-
+    -Dservices.web-admin.port=9010
+    -Dservices.web-admin.enabled=true
+    -Dservices.web-admin.host=0.0.0.0
+
+# Service configuration
+service:
+  type: ClusterIP
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9010"
+    prometheus.io/path: "/metrics"
+
+# Zookeeper with metrics
+zookeeper:
+  resources:
+    requests:
+      cpu: "0.5"
+      memory: "1Gi"
+    limits:
+      cpu: "0.5"
+      memory: "1Gi"
+  volumeSize: "10Gi"
+  count: 1
+  # Enable Zookeeper metrics
+  extraStartParams: >-
+    -Dmetricsrovider.className=org.apache.zookeeper.metrics.prometheus.PrometheusMetricsProvider
+    -Dmetricsrovider.httpPort=9010
+
+# MinIO Storage
+distStorage:
+  type: "aws"
+  aws:
+    bucketName: "dremio-dist-storage"
+    path: "/"
+    authentication: "accessKeySecret"
+    credentials:
+      accessKey: "minioadmin"
+      secret: "minioadmin123"
+    extraProperties: |
+      <property>
+        <name>fs.s3a.endpoint</name>
+        <value>http://minio.minio.svc.cluster.local:9000</value>
+      </property>
+      <property>
+        <name>fs.s3a.path.style.access</name>
+        <value>true</value>
+      </property>
+      <property>
+        <name>dremio.s3.compat</name>
+        <value>true</value>
+      </property>
+      <property>
+        <name>fs.s3a.connection.ssl.enabled</name>
+        <value>false</value>
+      </property>
+
+# Disable all optional components
+mongodb:
+  enabled: false
+
+mongodbOperator:
+  enabled: false
+
+catalog:
+  enabled: false
+
+catalogServiceServer:
+  enabled: false
+
+catalogservices:
+  enabled: false
+
+opensearch:
+  enabled: false
+
+nats:
+  enabled: false
+
+engineOperator:
+  enabled: false
+
+telemetry:
+  enabled: false
+
+# Pod annotations for Prometheus
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9010"
+  prometheus.io/path: "/metrics"

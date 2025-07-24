@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: dremio
+
+resources:
+  - namespace.yaml
+  - image-pull-secret.yaml
+  - catalog-s3-secret.yaml
+  - ingress.yaml
+
+commonLabels:
+  app.kubernetes.io/part-of: data-platform
+  app.kubernetes.io/managed-by: argocd

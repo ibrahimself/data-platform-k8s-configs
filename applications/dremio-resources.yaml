@@ -1,3 +1,5 @@
+# data-platform-k8s-configs/applications/dremio-resources.yaml
+---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -10,7 +12,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: git@github.com:ibrahimself/data-platform-k8s-configs.git
+    repoURL: https://github.com/ibrahimself/data-platform-k8s-configs.git
     targetRevision: HEAD
     path: resources/dremio
   destination:
@@ -23,3 +25,41 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+---
+# data-platform-k8s-configs/applications/dremio-helm.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: dremio
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  sources:
+    # First source: Helm chart from OCI registry
+    - repoURL: quay.io
+      chart: dremio/dremio-helm
+      targetRevision: 3.0.1
+      helm:
+        valueFiles:
+          - $values/resources/dremio-prometheus/values.yaml
+    # Second source: values file from Git
+    - repoURL: https://github.com/ibrahimself/data-platform-k8s-configs.git
+      targetRevision: HEAD
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: dremio
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+  ignoreDifferences:
+    - group: apps
+      kind: StatefulSet
+      jsonPointers:
+        - /spec/volumeClaimTemplates

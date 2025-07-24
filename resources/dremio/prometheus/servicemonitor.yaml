@@ -1,0 +1,53 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: dremio-metrics
+  namespace: dremio
+  labels:
+    app: dremio
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app: dremio-coordinator
+  endpoints:
+  - port: web-admin
+    path: /metrics
+    interval: 30s
+    scheme: http
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: dremio-executor-metrics
+  namespace: dremio
+  labels:
+    app: dremio
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app: dremio-executor
+  endpoints:
+  - port: web-admin
+    path: /metrics
+    interval: 30s
+    scheme: http
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: dremio-zookeeper-metrics
+  namespace: dremio
+  labels:
+    app: dremio
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app: dremio-zookeeper
+  endpoints:
+  - port: web-admin
+    path: /metrics
+    interval: 30s
+    scheme: http

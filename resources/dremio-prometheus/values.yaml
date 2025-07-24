@@ -1,0 +1,162 @@
+# data-platform-k8s-configs/resources/dremio-prometheus/values.yaml
+# Dremio Configuration with Prometheus Metrics Enabled
+
+# License and image
+dremio:
+  license: "eyJraWQiOiI4MGZhMjgxYzZhZjczNDNkNTE1YTVhMzg1MDg1N2RhNmE2YmEzMTU3NWE5ZjVlZmVhMmQ4MTkyMGUyM2Q2OGY0IiwiYWxnIjoiRVMyNTYifQ.eyJpc3MiOiJEcmVtaW8iLCJzdWIiOiIwMDM1ZDAwMDA3TFRkT0VBQTEiLCJuYmYiOjE3NTI3ODA0NzYsImV4cCI6MTc1NTU0NTI3NiwiaWF0IjoxNzUyNzgwNDc2LCJqdGkiOiIxNzUyNzgwNDc2MDYyVzJjciJ9.u8bxfpQvyieeGn3H8RNIyKqbIgHR4pYO0mfBDBh23WJJw58t2WsDEhbOL6rUdfyGu4hItUtcohCoSEXMaAAolg"
+  
+  image:
+    repository: quay.io/dremio/dremio-enterprise
+    tag: 26.0.0
+  
+  # IMPORTANT: Enable Prometheus metrics - based on dremio-professional-services documentation
+  extraStartParams: >-
+    -Dservices.web-admin.port=9010
+    -Dservices.web-admin.enabled=true
+    -Dservices.web-admin.host=0.0.0.0
+
+imagePullSecrets:
+  - dremio-quay-secret
+
+# Coordinator with Prometheus metrics
+coordinator:
+  master:
+    resources:
+      requests:
+        cpu: "4"
+        memory: "16Gi"
+      limits:
+        cpu: "4"
+        memory: "16Gi"
+    volumeSize: "100Gi"
+    count: 1
+    # Enable Prometheus metrics for coordinator
+    extraStartParams: >-
+      -Dservices.web-admin.port=9010
+      -Dservices.web-admin.enabled=true
+      -Dservices.web-admin.host=0.0.0.0
+    # Add container port for metrics
+    containerPorts:
+      - containerPort: 9010
+        name: prometheus
+        protocol: TCP
+  # No secondary coordinators
+  count: 0
+
+# Executor with Prometheus metrics
+executor:
+  resources:
+    requests:
+      cpu: "4"
+      memory: "16Gi"
+    limits:
+      cpu: "4"
+      memory: "16Gi"
+  count: 2
+  volumeSize: "64Gi"
+  engines: ["default"]
+  cloudCache:
+    enabled: false
+  # Enable Prometheus metrics for executors
+  extraStartParams: >-
+    -Dservices.web-admin.port=9010
+    -Dservices.web-admin.enabled=true
+    -Dservices.web-admin.host=0.0.0.0
+  # Add container port for metrics
+  containerPorts:
+    - containerPort: 9010
+      name: prometheus
+      protocol: TCP
+
+# Service configuration
+service:
+  type: ClusterIP
+  # Annotations for Prometheus discovery (if not using PodMonitor)
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9010"
+    prometheus.io/path: "/metrics"
+
+# Zookeeper with metrics
+zookeeper:
+  resources:
+    requests:
+      cpu: "1"
+      memory: "2Gi"
+    limits:
+      cpu: "2"
+      memory: "4Gi"
+  volumeSize: "10Gi"
+  count: 3  # 3 for HA
+  # Enable Prometheus metrics for Zookeeper
+  extraEnvVars:
+    - name: ZOO_CFG_EXTRA
+      value: |
+        metricsProvider.className=org.apache.zookeeper.metrics.prometheus.PrometheusMetricsProvider
+        metricsProvider.httpPort=9010
+  containerPorts:
+    - containerPort: 9010
+      name: prometheus
+      protocol: TCP
+
+# MinIO Storage Configuration
+distStorage:
+  type: "aws"
+  aws:
+    bucketName: "dremio-dist-storage"
+    path: "/"
+    authentication: "accessKeySecret"
+    credentials:
+      accessKey: "minioadmin"
+      secret: "minioadmin123"
+    extraProperties: |
+      <property>
+        <name>fs.s3a.endpoint</name>
+        <value>http://minio.minio.svc.cluster.local:9000</value>
+      </property>
+      <property>
+        <name>fs.s3a.path.style.access</name>
+        <value>true</value>
+      </property>
+      <property>
+        <name>dremio.s3.compat</name>
+        <value>true</value>
+      </property>
+      <property>
+        <name>fs.s3a.connection.ssl.enabled</name>
+        <value>false</value>
+      </property>
+
+# Disable all optional components
+mongodb:
+  enabled: false
+
+mongodbOperator:
+  enabled: false
+
+catalog:
+  enabled: false
+
+catalogServiceServer:
+  enabled: false
+
+catalogservices:
+  enabled: false
+
+opensearch:
+  enabled: false
+
+nats:
+  enabled: false
+
+engineOperator:
+  enabled: false
+
+telemetry:
+  enabled: false
+
+# Pod labels for monitoring
+podLabels:
+  monitoring: "true"
+  app.kubernetes.io/name: "dremio"
+  app.kubernetes.io/component: "lakehouse"
